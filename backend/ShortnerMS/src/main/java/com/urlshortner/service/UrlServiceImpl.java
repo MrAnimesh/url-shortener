@@ -171,28 +171,29 @@ public class UrlServiceImpl {
         	normalizedUrl = "https://"+normalizedUrl;
   
         }
+        return true;
     	
-        try {
-            URI uri = URI.create(normalizedUrl);
-            URL url = uri.toURL();
-            
-            InetAddress.getByName(url.getHost());
-
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("HEAD");
-            connection.setConnectTimeout(3000);
-            connection.connect();
-
-            int responseCode = connection.getResponseCode();
-            System.out.println("response code: "+responseCode);
-            return (responseCode >= 200 && responseCode < 400);
-        } catch (UnknownHostException e) {
-            System.out.println("Unknown host: " + e.getMessage());
-            return false;
-        } catch (Exception e) {
-            System.out.println("URL validation failed: " + e.getMessage());
-            return false;
-        }
+//        try {
+//            URI uri = URI.create(normalizedUrl);
+//            URL url = uri.toURL();
+//
+//            InetAddress.getByName(url.getHost());
+//
+//            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+//            connection.setRequestMethod("HEAD");
+//            connection.setConnectTimeout(3000);
+//            connection.connect();
+//
+//            int responseCode = connection.getResponseCode();
+//            System.out.println("response code: "+responseCode);
+//            return (responseCode >= 200 && responseCode < 400);
+//        } catch (UnknownHostException e) {
+//            System.out.println("Unknown host: " + e.getMessage());
+//            return false;
+//        } catch (Exception e) {
+//            System.out.println("URL validation failed: " + e.getMessage());
+//            return false;
+//        }
     }
     
     public boolean updateMaxClicksAllowed(String shortCode, Long userId, Long maxClicks) {

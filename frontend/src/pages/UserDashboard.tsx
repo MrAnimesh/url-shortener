@@ -17,7 +17,7 @@ interface Url {
   expiresAt: string;
   maxClicksAllowed: number | null;
   passwordProtected: boolean;
-  password: string
+  password: string;
 }
 
 interface SortConfig {
@@ -40,9 +40,53 @@ const UserDashboard: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [maxClicks, setMaxClicks] = useState("");
   const [clicksInputOpen, setClickInputOpen] = useState(false);
-  const [passwordValue, setPasswordValue] = useState<string>('');
-  const [showPasswordInput, setShowPasswordInput] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+
+  // FOR PASSWORD
+
+  const [urlPasswordVisible, setUrlPasswordVisible] = useState({});
+  const [urlEditingPassword, setUrlEditingPassword] = useState({});
+  const [urlPasswordInputs, setUrlPasswordInputs] = useState({});
+
+  // Helper functions
+  const toggleUrlPasswordVisibility = (shortUrl: string) => {
+    setUrlPasswordVisible((prev: any) => ({
+      ...prev,
+      [shortUrl]: !prev[shortUrl],
+    }));
+  };
+
+  const toggleUrlPasswordEdit = (shortUrl: string) => {
+    setUrlEditingPassword((prev: any) => ({
+      ...prev,
+      [shortUrl]: !prev[shortUrl],
+    }));
+  };
+
+  const updateUrlPasswordInput = (shortUrl: string, value: string) => {
+    setUrlPasswordInputs((prev) => ({
+      ...prev,
+      [shortUrl]: value,
+    }));
+  };
+
+  const handleUrlPasswordSubmit = (shortUrl: string) => {
+    // Close the input
+    setUrlEditingPassword((prev) => ({
+      ...prev,
+      [shortUrl]: false,
+    }));
+
+    // Call your existing function with the password for this specific URL
+    handleSetPassword(shortUrl, urlPasswordInputs[shortUrl] || "");
+
+    // Clear the password value for this URL
+    setUrlPasswordInputs((prev) => ({
+      ...prev,
+      [shortUrl]: "",
+    }));
+  };
+
+  // FOR PASSWORD
 
   const fetchAllUrl = async () => {
     const res = await axiosInstance.get(`/shortner/users/urls`);
@@ -291,27 +335,29 @@ const UserDashboard: React.FC = () => {
     }
   };
 
-  const handleSetPassword = async (shortCode: string) => {
+  const handleSetPassword = async (
+    shortCode: string,
+    passwordValue: string
+  ) => {
+    if (!shortCode) return;
     console.log("url: ", shortCode);
-    console.log("password value: ",passwordValue);
-    try{
-
-    const res = await axiosInstance.put('/shortner/url/set-password',{
+    console.log("password value: ", passwordValue);
+    try {
+      const res = await axiosInstance.put("/shortner/url/set-password", {
         urlPassword: passwordValue,
-        shortCode: shortCode
-    })
-    console.log(res.data);
-    setUrls(
+        shortCode: shortCode,
+      });
+      console.log(res.data);
+      setUrls(
         urls.map((url) =>
-          url.shortUrl === shortCode ? { ...url, isPasswordProtected: true, password: passwordValue} : url
+          url.shortUrl === shortCode
+            ? { ...url, passwordProtected: true, password: passwordValue }
+            : url
         )
       );
-      setPasswordValue('')
-    }catch(err){}
-    
-    
-    
-  }
+      setActiveShortCode("");
+    } catch (err) {}
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -681,6 +727,75 @@ const UserDashboard: React.FC = () => {
                     {/* password starts */}
 
                     <td className="px-4 py-3 text-sm">
+                      <div className="flex justify-center">
+                        {url.passwordProtected && (
+                          <div className="flex items-center justify-center">
+                            {/* Show password if visible for this URL */}
+                            {urlPasswordVisible[url.shortUrl] && (
+                              <span className="mr-2">{url.password}</span>
+                            )}
+
+                            {/* Toggle visibility icon - hide when input field is open */}
+                            {!urlEditingPassword[url.shortUrl] && (
+                              <span
+                                className="material-icons w-7 md-18 cursor-pointer mr-2"
+                                onClick={() =>
+                                  toggleUrlPasswordVisibility(url.shortUrl)
+                                }
+                              >
+                                {urlPasswordVisible[url.shortUrl]
+                                  ? "visibility_off"
+                                  : "visibility_on"}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Edit password icon - only show if not currently editing this URL */}
+                        {!urlEditingPassword[url.shortUrl] && (
+                          <span
+                            className="material-icons cursor-pointer"
+                            onClick={() => toggleUrlPasswordEdit(url.shortUrl)}
+                          >
+                            edit_note
+                          </span>
+                        )}
+
+                        {/* Password input - only show for this specific URL when editing */}
+                        {urlEditingPassword[url.shortUrl] && (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="text"
+                              className="w-24 bg-gray-300 p-2"
+                              value={urlPasswordInputs[url.shortUrl] || ""}
+                              onChange={(e) =>
+                                updateUrlPasswordInput(
+                                  url.shortUrl,
+                                  e.target.value
+                                )
+                              }
+                              placeholder="New password"
+                            />
+                            <button
+                              onClick={() =>
+                                handleUrlPasswordSubmit(url.shortUrl)
+                              }
+                            >
+                              <span className="material-icons md-18 cursor-pointer">check</span>
+                            </button>
+                            <button
+                              onClick={() =>
+                                toggleUrlPasswordEdit(url.shortUrl)
+                              }
+                            >
+                              <span className="material-icons md-18 cursor-pointer">close</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* <td className="px-4 py-3 text-sm">
                       <div className="flex justify-end space-x-2">
                       <span onClick={()=>setShowPassword(!showPassword)}>{url.passwordProtected && showPassword? url.password : "N/A"}</span>
                         <div>
@@ -717,7 +832,7 @@ const UserDashboard: React.FC = () => {
                           <span className="material-icons md-18">close</span>
                         </button>}
                       </div>
-                    </td>
+                    </td> */}
 
                     {/* password ends */}
 
