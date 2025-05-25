@@ -5,6 +5,7 @@ import axios from "axios";
 import { checkAuth } from "../utility/Utils";
 import { UseGlobalContext } from "../context/GlobalContext";
 import axiosInstance from "../utility/axiosInstance";
+import validateField from "../components/Validate";
 
 type CheckType = string | null;
 
@@ -88,65 +89,80 @@ const FaqItem: React.FC<FaqItemProps> = ({ question, answer }) => {
   );
 };
 
+const urls: { full: string; short: string }[] = [
+  {
+    full: "https://example.com/very-long-url-that-needs-shortening",
+    short: "https://short.ly/abc123",
+  },
+  {
+    full: "https://another-long-url.com/path/to/resource?param=value",
+    short: "https://short.ly/xyz789",
+  },
+  {
+    full: "https://yetanotherwebsite.com/super-long-link-with-parameters",
+    short: "https://short.ly/def456",
+  },
+];
+
+const testimonials: TestimonialProps[] = [
+  {
+    content: "This service is amazing! It's fast, reliable, and easy to use.",
+    author: "John Doe",
+  },
+  {
+    content:
+      "I love the analytics feature. It helps me track my campaigns effectively.",
+    author: "Jane Smith",
+  },
+  {
+    content: "The custom URLs are a game-changer for my business.",
+    author: "Mike Johnson",
+  },
+];
+
+const faqs: FaqItemProps[] = [
+  {
+    question: "How does URL shortening work?",
+    answer:
+      "Our service takes your long URL and generates a unique, shorter version that redirects to the original link. This makes sharing links easier and provides tracking capabilities.",
+  },
+  {
+    question: "Is it free to use?",
+    answer:
+      "Yes, our basic URL shortening service is completely free to use. We also offer premium plans with advanced features for power users and businesses.",
+  },
+  {
+    question: "Can I track clicks on my links?",
+    answer:
+      "Absolutely! Our analytics dashboard provides detailed insights into link performance, including geographic data, referrers, and time-based statistics.",
+  },
+  {
+    question: "Are shortened links permanent?",
+    answer:
+      "Yes, once created, your shortened links will not expire and will continue to redirect to the original URL indefinitely.",
+  },
+];
+type UrlForm = { inputUrl: string; shortUrl: string };
+
 const Home: React.FC = () => {
   const [animatedIndex, setAnimatedIndex] = useState<number>(0);
-  const [inputUrl, setInputUrl] = useState<string>("");
-  const [shortUrl, setShortUrl] = useState<string>("");
   const { isLoggedIn } = UseGlobalContext();
+  const [urlForm, setUrlForm] = useState<UrlForm>({
+    inputUrl: "",
+    shortUrl: "",
+  });
+  const [formErrors, setFormErrors] = useState<
+    Partial<Record<keyof UrlForm, string>>
+  >({});
 
-  const urls: { full: string; short: string }[] = [
-    {
-      full: "https://example.com/very-long-url-that-needs-shortening",
-      short: "https://short.ly/abc123",
-    },
-    {
-      full: "https://another-long-url.com/path/to/resource?param=value",
-      short: "https://short.ly/xyz789",
-    },
-    {
-      full: "https://yetanotherwebsite.com/super-long-link-with-parameters",
-      short: "https://short.ly/def456",
-    },
-  ];
+  const handleChange = (e: any) => {
 
-  const testimonials: TestimonialProps[] = [
-    {
-      content: "This service is amazing! It's fast, reliable, and easy to use.",
-      author: "John Doe",
-    },
-    {
-      content:
-        "I love the analytics feature. It helps me track my campaigns effectively.",
-      author: "Jane Smith",
-    },
-    {
-      content: "The custom URLs are a game-changer for my business.",
-      author: "Mike Johnson",
-    },
-  ];
+    const { name, value } = e.target;
+    setUrlForm((prev) => ({ ...prev, [name]: value }));
 
-  const faqs: FaqItemProps[] = [
-    {
-      question: "How does URL shortening work?",
-      answer:
-        "Our service takes your long URL and generates a unique, shorter version that redirects to the original link. This makes sharing links easier and provides tracking capabilities.",
-    },
-    {
-      question: "Is it free to use?",
-      answer:
-        "Yes, our basic URL shortening service is completely free to use. We also offer premium plans with advanced features for power users and businesses.",
-    },
-    {
-      question: "Can I track clicks on my links?",
-      answer:
-        "Absolutely! Our analytics dashboard provides detailed insights into link performance, including geographic data, referrers, and time-based statistics.",
-    },
-    {
-      question: "Are shortened links permanent?",
-      answer:
-        "Yes, once created, your shortened links will not expire and will continue to redirect to the original URL indefinitely.",
-    },
-  ];
+    const error = validateField(name, value);
+    setFormErrors((prev) => ({ ...prev, [name]: error }));
+  };
 
   useEffect(() => {
     const token: CheckType = localStorage.getItem("accessToken");
@@ -159,27 +175,34 @@ const Home: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleShortenUrl = async () => {
-    const userId = localStorage.getItem("userId");
-    console.log(inputUrl);
+  const handleShortenUrl = async (e: any) => {
+    e.preventDefault();
+
+    const errors: Record<string, string> = {};
+    Object.entries(urlForm).forEach(([name, value]) => {
+      const error = validateField(name, value);
+      if (error) errors[name] = error;
+    });
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      return; // stop submission due to validation errors
+    }
+
     try {
       if (isLoggedIn) {
         const res = await axiosInstance.post("/shortner/private/shorten", {
-          originalUrl: inputUrl,
-          // userId: userId,
+          originalUrl: urlForm.inputUrl,
         });
-        console.log(res.data);
-        setShortUrl(res.data);
+        setUrlForm((prev) => ({ ...prev, shortUrl: res.data }));
       } else {
         const res = await axios.post(
           "http://localhost:8081/shortner/public/shorten",
           {
-            originalUrl: inputUrl,
-            // userId: userId,
+            originalUrl: urlForm.inputUrl,
           }
         );
         console.log(res.data);
-        setShortUrl(res.data);
+        setUrlForm((prev) => ({ ...prev, shortUrl: res.data }));
       }
     } catch (err: any) {
       console.log("err", err.response.data);
@@ -281,8 +304,10 @@ const Home: React.FC = () => {
               <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-2">
                 <input
                   type="text"
-                  value={inputUrl}
-                  onChange={(e) => setInputUrl(e.target.value)}
+                  value={urlForm.inputUrl}
+                  id="inputUrl"
+                  name="inputUrl"
+                  onChange={handleChange}
                   placeholder="Enter your URL here..."
                   className="w-full p-4 rounded-lg bg-gray-100 border-gray-200 border text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-lg"
                 />
@@ -293,11 +318,12 @@ const Home: React.FC = () => {
                   Shorten URL
                 </button>
               </div>
-              {shortUrl && (
+              {formErrors.inputUrl && <p className="mt-2 text-sm text-red-600">{formErrors.inputUrl}</p>}
+              {urlForm.shortUrl && (
                 <div
                   className={`text-sm font-mono text-indigo-600 mt-4 flex justify-center items-center space-x-2`}
                 >
-                  <span id="shortenUrl">{shortUrl}</span>
+                  <span id="shortenUrl">{urlForm.shortUrl}</span>
                   <button
                     onClick={copyToClipboard}
                     className="ml-2 text-sm bg-indigo-500 text-white p-1 rounded transition-transform duration-200 hover:scale-110 active:scale-90"

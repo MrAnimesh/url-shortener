@@ -32,7 +32,6 @@ const UserDashboard: React.FC = () => {
   const [isCustomDomainFocused, setIsCustomDomainFocused] =
     useState<boolean>(false);
 
-  // const [isErrorPanelVisible, setIsErrorPanelVisible] = useState(false);
   const [isSourceChangeFocused, setIsSourceChangeFocused] = useState(false);
   const [activeShortCode, setActiveShortCode] = useState<string>("");
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -41,10 +40,15 @@ const UserDashboard: React.FC = () => {
   const [clicksInputOpen, setClickInputOpen] = useState(false);
 
   // FOR PASSWORD
-
-  const [urlPasswordVisible, setUrlPasswordVisible] = useState<{ [key: string]: boolean }>({});
-  const [urlEditingPassword, setUrlEditingPassword] = useState<{ [key: string]: boolean }>({});
-  const [urlPasswordInputs, setUrlPasswordInputs] = useState<{ [key: string]: string }>({});
+  const [urlPasswordVisible, setUrlPasswordVisible] = useState<{
+    [key: string]: boolean;
+  }>({});
+  const [urlEditingPassword, setUrlEditingPassword] = useState<{
+    [key: string]: boolean;
+  }>({});
+  const [urlPasswordInputs, setUrlPasswordInputs] = useState<{
+    [key: string]: string;
+  }>({});
 
   // Helper functions
   const toggleUrlPasswordVisibility = (shortUrl: string) => {
@@ -256,16 +260,9 @@ const UserDashboard: React.FC = () => {
   };
 
   const handleSetDate = (date: Date, shortCode: string) => {
-    // console.log("returned date: ", date, " shortCode: ", shortCode);
-
-    const dateInString = date.toString();
-    // console.log("converted: ", date);
 
     setSelectedDate(date);
     setShowDatePicker(false);
-    const formatedDate = formatDate(dateInString, true);
-    // console.log("formated date: ", formatedDate);
-
     if (date) {
       setUrls(
         urls.map((url) =>
@@ -282,7 +279,6 @@ const UserDashboard: React.FC = () => {
       const res = await axiosInstance.put(
         `/shortner/url/resetexpires/${shortCode}`
       );
-      // console.log(res.data);
       setUrls(
         urls.map((url) =>
           url.shortUrl === shortCode ? { ...url, expiresAt: "" } : url
@@ -338,7 +334,7 @@ const UserDashboard: React.FC = () => {
     shortCode: string,
     passwordValue: string
   ) => {
-    if (!shortCode) return;
+    if (!shortCode || !passwordValue) return;
     console.log("url: ", shortCode);
     console.log("password value: ", passwordValue);
     try {
@@ -361,7 +357,6 @@ const UserDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      {/* {isErrorPanelVisible && <ErrorPannel />} */}
       <header className="bg-blue-500 text-white p-4">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl font-semibold">URL Shortener Dashboard</h1>
@@ -403,20 +398,19 @@ const UserDashboard: React.FC = () => {
               }
               className="w-full p-2 border rounded"
             />
-            {/* <span className="text-gray-500 text-sm">Search</span> */}
           </div>
           <div className="flex gap-2">
             <button
-              className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 w-full sm:w-auto"
+              className="bg-blue-500 text-white font-bold p-2 rounded-lg hover:bg-blue-600 w-full sm:w-auto"
               onClick={renderChildComponent}
             >
-              Add New URL
+              Short URL
             </button>
             <button
-              className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 w-full sm:w-auto"
+              className="bg-blue-500 text-white font-bold p-2 rounded-lg hover:bg-blue-600 w-full sm:w-auto"
               onClick={renderCustomDomainCard}
             >
-              Generate Custom URL
+              Generate Custome Link
             </button>
           </div>
           {isCardOpen && (
@@ -468,8 +462,10 @@ const UserDashboard: React.FC = () => {
                 <th className="p-4 text-center font-semibold border-b border-gray-300">
                   Max Clicks Allowed
                 </th>
-                <th className="p-4 text-center font-semibold border-b border-gray-300">
-                  Expires
+                <th className="p-4 text-center font-semibold border-b border-gray-300"
+                    onClick={() => requestSort("expiresAt")}
+                >
+                  Expires {getSortIndicator("expiresAt")}
                 </th>
                 <th className="p-4 text-center font-semibold border-b border-gray-300">
                   Password
@@ -664,7 +660,7 @@ const UserDashboard: React.FC = () => {
 
                     {/* Expires at start*/}
 
-                    <td className="px-4 py-3 text-sm">
+                    <td className="px-4 py-3 text-sm" >
                       <div className="relative flex  text-center justify-center">
                         {/* Display current expiration status */}
                         <span
@@ -765,7 +761,7 @@ const UserDashboard: React.FC = () => {
                           <div className="flex items-center gap-1">
                             <input
                               type="text"
-                              className="w-24 bg-gray-300 p-2"
+                              className="w-24 bg-gray-300 text-xs p-2 rounded"
                               value={urlPasswordInputs[url.shortUrl] || ""}
                               onChange={(e) =>
                                 updateUrlPasswordInput(
@@ -773,67 +769,36 @@ const UserDashboard: React.FC = () => {
                                   e.target.value
                                 )
                               }
-                              placeholder="New password"
+                              placeholder="New Password"
                             />
                             <button
+                            className="disabled:text-gray-400"
                               onClick={() =>
                                 handleUrlPasswordSubmit(url.shortUrl)
                               }
+                              disabled={!urlPasswordInputs[url.shortUrl]}
                             >
-                              <span className="material-icons md-18 cursor-pointer">check</span>
+                              <span className="material-icons md-18 cursor-pointer">
+                                check
+                              </span>
                             </button>
                             <button
                               onClick={() =>
                                 toggleUrlPasswordEdit(url.shortUrl)
                               }
                             >
-                              <span className="material-icons md-18 cursor-pointer">close</span>
+                              <span className="material-icons md-18 cursor-pointer">
+                                close
+                              </span>
                             </button>
                           </div>
                         )}
                       </div>
                     </td>
 
-                    {/* <td className="px-4 py-3 text-sm">
-                      <div className="flex justify-end space-x-2">
-                      <span onClick={()=>setShowPassword(!showPassword)}>{url.passwordProtected && showPassword? url.password : "N/A"}</span>
-                        <div>
-                          {!showPasswordInput ? (
-                            <button
-                              className="text-blue-600 hover:text-blue-800"
-                              onClick={() => setShowPasswordInput(true)}
-                            >
-                              {url.passwordProtected ? (
-                                <span className="material-icons md-18">edit</span>
-                              ) : (
-                                <span className="material-icons">lock</span>
-                              )}
-                            </button>
-                          ) : (
-                            <div className="flex">
-                              <input
-                                type="text"
-                                className="w-24 bg-gray-300"
-                                value={passwordValue}
-                                onChange={(e) => setPasswordValue(e.target.value)}
-                              />
-                              <button
-                                onClick={() => {setShowPasswordInput(false)
-                                                handleSetPassword(url.shortUrl)
-                                }}
-                              >
-                                <span className="material-icons">check</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        { url.passwordProtected && !showPasswordInput && <button className="text-red-600 hover:text-red-800">
-                          <span className="material-icons md-18">close</span>
-                        </button>}
-                      </div>
-                    </td> */}
-
                     {/* password ends */}
+
+                    {/* Actions start */}
 
                     <td className="p-4 border-b border-gray-200 text-right">
                       <div className="flex justify-end space-x-2">
@@ -886,6 +851,8 @@ const UserDashboard: React.FC = () => {
                           />
                         )}
                     </td>
+                    {/* Actions start */}
+
                   </tr>
                 ))
               ) : (

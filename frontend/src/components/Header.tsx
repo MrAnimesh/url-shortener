@@ -58,9 +58,10 @@ const Header: React.FC = () => {
               />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500">
+          <a className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500"
+              href="/home">
             LinkShort
-          </h1>
+          </a>
         </div>
 
         {/* Mobile menu button */}

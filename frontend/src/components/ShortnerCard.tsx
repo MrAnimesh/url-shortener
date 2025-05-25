@@ -1,107 +1,111 @@
 import { useState } from "react";
 import axiosInstance from "../utility/axiosInstance";
 import { UseGlobalContext } from "../context/GlobalContext";
+import validateField from "./Validate";
 
-// Simple icon components
-
-const CloseIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="18" y1="6" x2="6" y2="18"></line>
-    <line x1="6" y1="6" x2="18" y2="18"></line>
-  </svg>
-);
-
-const GlobeIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="12" cy="12" r="10"></circle>
-    <line x1="2" y1="12" x2="22" y2="12"></line>
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-  </svg>
-);
-
-const CopyIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-  </svg>
-);
+type UrlForm = {
+  originalUrl: string;
+  shortenedUrl: string;
+  customDomain: string;
+};
 
 export default function ShortnerCard(props: any) {
-  const [originalUrl, setOriginalUrl] = useState("");
-  const [shortenedUrl, setShortenedUrl] = useState("");
+
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const { isLoggedIn } = UseGlobalContext();
-  const [customDomain, setCustomDomain] = useState("");
+
+  const [urlForm, setUrlForm] = useState<UrlForm>({
+    originalUrl: "",
+    shortenedUrl: "",
+    customDomain: "",
+  });
+
+  const [urlFormError, setUrlFormError] = useState<
+    Partial<Record<keyof UrlForm, string>>
+  >({});
+
+  const handleChange = (e: any) => {
+    const { name, value } = e.target;
+    setUrlForm((prev) => ({ ...prev, [name]: value }));
+
+    const error = validateField(name, value);
+    setUrlFormError((prev) => ({ ...prev, [name]: error }));
+  };
 
   const handleSubmit = async (e: any) => {
+    console.log("Is getting clicked");
+    
     e.preventDefault();
+
+    const errors: Record<string, string> = {};
+    Object.entries(["originalUrl"]).forEach(([name, value]) => {
+      const error = validateField(name, value);
+      if (error) errors[name] = error;
+    });
+    setUrlFormError(errors);
+    if (Object.keys(errors).length > 0) {
+      return; // stop submission due to validation errors
+    }
+
+    console.log("hiiiiiii");
+
     setIsLoading(true);
     if (isLoggedIn) {
-      const res = await axiosInstance.post("/shortner/private/shorten", {
-        originalUrl: originalUrl,
-        // userId: userId,
-      });
-      console.log("url: ", res.data);
-      setShortenedUrl(res.data);
-      // props.setUrls(prevUrls => [res.data, ...prevUrls]);
-      setIsLoading(false);
+      try {
+        const res = await axiosInstance.post("/shortner/private/shorten", {
+          originalUrl: urlForm.originalUrl,
+        });
+        console.log("url: ", res.data);
+        setUrlForm((prev) => ({ ...prev, shortenedUrl: res.data }));
+
+        setIsLoading(false);
+      } catch {
+        setIsLoading(false);
+      }
     }
   };
+
   const handleSubmitForCustom = async (e: any) => {
     e.preventDefault();
+
+    const errors: Record<string, string> = {};
+    Object.entries(urlForm).forEach(([name, value]) => {
+      const error = validateField(name, value);
+      if (error) errors[name] = error;
+    });
+    setUrlFormError(errors);
+    if (Object.keys(errors).length > 0) {
+      return; // stop submission due to validation errors
+    }
+
     setIsLoading(true);
     if (isLoggedIn) {
-      const res = await axiosInstance.post("/shortner/shorten/customUrl", {
-        originalUrl: originalUrl,
-        customUrl: customDomain,
-      });
-      console.log(res.data);
-      setShortenedUrl(res.data);
-      // props.setUrls(res.data)
-      setIsLoading(false);
+      try {
+        const res = await axiosInstance.post("/shortner/shorten/customUrl", {
+          originalUrl: urlForm.originalUrl,
+          customUrl: urlForm.customDomain,
+        });
+        setUrlForm((prev) => ({ ...prev, shortenedUrl: res.data }));
+        setIsLoading(false);
+      } catch {
+        setIsLoading(false);
+      }
     }
   };
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(`${shortenedUrl}`);
+    navigator.clipboard.writeText(`${urlForm.shortenedUrl}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const resetForm = () => {
-    setOriginalUrl("");
-    setShortenedUrl("");
+    setUrlForm({
+      originalUrl: "",
+      shortenedUrl: "",
+      customDomain: "",
+    });
   };
 
   const closeCard = () => {
@@ -120,7 +124,7 @@ export default function ShortnerCard(props: any) {
               onClick={closeCard}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
             >
-              <CloseIcon />
+              <span className="material-icons">close</span>
             </button>
 
             {/* Header */}
@@ -136,39 +140,50 @@ export default function ShortnerCard(props: any) {
 
             {/* Content */}
             <div className="p-6">
-              {!shortenedUrl ? (
+              {!urlForm.shortenedUrl ? (
                 <div>
                   <div className="relative">
                     <input
                       type="url"
-                      value={originalUrl}
-                      onChange={(e) => setOriginalUrl(e.target.value)}
+                      value={urlForm.originalUrl}
+                      name="originalUrl"
+                      onChange={handleChange}
                       placeholder="Enter your long URL here"
                       className="w-full p-4 pl-10 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
-                    <span className="absolute left-3 top-4 text-gray-400">
-                      <GlobeIcon />
+                    <span className="material-icons absolute left-3 top-4 text-gray-400">
+                      language
                     </span>
                   </div>
+                  {urlFormError.originalUrl && (
+                    <p className="mt-2 text-sm text-red-600">
+                      {urlFormError.originalUrl}
+                    </p>
+                  )}
+
                   {props.isCustomDomainFocused && (
                     <div className="flex items-start gap-2 mt-4 mb-4">
-                      <div className="flex items-center text-sm text-gray-600 mr-2 mt-2">
-                        <span>Domain:</span>
-                      </div>
                       <div className="relative flex-1">
+                        {
+                          <span className="text-gray-400 text-sm">
+                            http://localhost:8081/{urlForm.customDomain}
+                          </span>
+                        }
                         <div className="flex items-center">
                           <input
                             type="text"
-                            value={customDomain}
-                            onChange={(e) => setCustomDomain(e.target.value)}
+                            value={urlForm.customDomain}
+                            placeholder="Enter your custom path"
+                            name="customDomain"
+                            onChange={handleChange}
                             className="w-full py-2 pl-1 pr-3 rounded-lg bg-gray-50 border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                           />
                         </div>
-                        {/* {domainFocused && ( */}
-                        <p className="text-xs text-gray-500 mt-1">
-                          Enter your custom domain.
-                        </p>
-                        {/* )} */}
+                        {urlFormError.customDomain && (
+                          <p className="mt-2 text-sm text-red-600">
+                            {urlFormError.customDomain}
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -196,7 +211,9 @@ export default function ShortnerCard(props: any) {
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center text-sm text-gray-500">
-                    <span className="line-clamp-1 flex-1">{originalUrl}</span>
+                    <span className="line-clamp-1 flex-1">
+                      {urlForm.originalUrl}
+                    </span>
                   </div>
 
                   <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-between">
@@ -205,7 +222,7 @@ export default function ShortnerCard(props: any) {
                         Your shortened URL
                       </p>
                       <p className="text-blue-600 font-medium">
-                        {shortenedUrl}
+                        {urlForm.shortenedUrl}
                       </p>
                     </div>
                     <button
@@ -217,7 +234,7 @@ export default function ShortnerCard(props: any) {
                           Copied!
                         </span>
                       ) : (
-                        <CopyIcon />
+                        <span className="material-icons">content_copy</span>
                       )}
                     </button>
                   </div>
