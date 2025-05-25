@@ -5,8 +5,6 @@ import axios from "axios";
 import { checkAuth } from "../utility/Utils";
 import { UseGlobalContext } from "../context/GlobalContext";
 import axiosInstance from "../utility/axiosInstance";
-import DatePickerCard from "../components/ChooseDeactivation";
-import ErrorPannel from "../components/ErrorPannel";
 
 type CheckType = string | null;
 
@@ -96,8 +94,6 @@ const Home: React.FC = () => {
   const [shortUrl, setShortUrl] = useState<string>("");
   const { isLoggedIn } = UseGlobalContext();
 
-  
-
   const urls: { full: string; short: string }[] = [
     {
       full: "https://example.com/very-long-url-that-needs-shortening",
@@ -166,29 +162,28 @@ const Home: React.FC = () => {
   const handleShortenUrl = async () => {
     const userId = localStorage.getItem("userId");
     console.log(inputUrl);
-    try{
-    if (isLoggedIn) {
-      const res = await axiosInstance.post("/shortner/private/shorten", {
-        originalUrl: inputUrl,
-        // userId: userId,
-      });
-      console.log(res.data);
-      setShortUrl(res.data);
-    }else{
-      const res = await axios.post(
-        "http://localhost:8081/shortner/public/shorten",
-        {
+    try {
+      if (isLoggedIn) {
+        const res = await axiosInstance.post("/shortner/private/shorten", {
           originalUrl: inputUrl,
           // userId: userId,
-        }
-      );
-      console.log(res.data);
-      setShortUrl(res.data);
+        });
+        console.log(res.data);
+        setShortUrl(res.data);
+      } else {
+        const res = await axios.post(
+          "http://localhost:8081/shortner/public/shorten",
+          {
+            originalUrl: inputUrl,
+            // userId: userId,
+          }
+        );
+        console.log(res.data);
+        setShortUrl(res.data);
+      }
+    } catch (err: any) {
+      console.log("err", err.response.data);
     }
-  }catch(err: any){
-    console.log("err", err.response.data);
-    
-  }
   };
 
   const copyToClipboard = async () => {

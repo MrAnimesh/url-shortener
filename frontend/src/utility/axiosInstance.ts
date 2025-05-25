@@ -1,4 +1,5 @@
 import axios from "axios";
+import { addError } from "../exception_handling/useErrorStore";
 const axiosInstance = axios.create({
   baseURL: "http://localhost:8081",
 });
@@ -44,7 +45,8 @@ axiosInstance.interceptors.response.use(
       }
     } else {
       console.log("response: ", error.response);
-
+      // Show error using global function (no need to import anything!)
+      addError("Something went wrong");
       return Promise.reject(error);
     }
   }

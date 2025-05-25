@@ -18,3 +18,14 @@ export const logout = async () => {
   if (window.location.pathname === "/") window.location.reload();
   else window.location.href = "/";
 };
+
+
+let showErrorGlobal: ((msg: string) => void) | null = null;
+
+export const registerErrorFn = (fn: (msg: string) => void) => {
+  showErrorGlobal = fn;
+};
+
+export const showGlobalError = (msg: string) => {
+  if (showErrorGlobal) showErrorGlobal(msg);
+};

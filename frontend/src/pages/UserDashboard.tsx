@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axiosInstance from "../utility/axiosInstance";
 import ShortnerCard from "../components/ShortnerCard";
-import ErrorPannel from "../components/ErrorPannel";
 import ChangeSourceCard from "../components/ChangeSourceCard";
 import DatePickerCard from "../components/ChooseDeactivation";
 import Tooltip from "../components/Tooltip";
@@ -33,7 +32,7 @@ const UserDashboard: React.FC = () => {
   const [isCustomDomainFocused, setIsCustomDomainFocused] =
     useState<boolean>(false);
 
-  const [isErrorPanelVisible, setIsErrorPanelVisible] = useState(false);
+  // const [isErrorPanelVisible, setIsErrorPanelVisible] = useState(false);
   const [isSourceChangeFocused, setIsSourceChangeFocused] = useState(false);
   const [activeShortCode, setActiveShortCode] = useState<string>("");
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -43,9 +42,9 @@ const UserDashboard: React.FC = () => {
 
   // FOR PASSWORD
 
-  const [urlPasswordVisible, setUrlPasswordVisible] = useState({});
-  const [urlEditingPassword, setUrlEditingPassword] = useState({});
-  const [urlPasswordInputs, setUrlPasswordInputs] = useState({});
+  const [urlPasswordVisible, setUrlPasswordVisible] = useState<{ [key: string]: boolean }>({});
+  const [urlEditingPassword, setUrlEditingPassword] = useState<{ [key: string]: boolean }>({});
+  const [urlPasswordInputs, setUrlPasswordInputs] = useState<{ [key: string]: string }>({});
 
   // Helper functions
   const toggleUrlPasswordVisibility = (shortUrl: string) => {
@@ -128,10 +127,10 @@ const UserDashboard: React.FC = () => {
       console.log("err", error);
 
       isSuccess = false;
-      setIsErrorPanelVisible(true);
-      setTimeout(() => {
-        setIsErrorPanelVisible(false);
-      }, 4000);
+      // setIsErrorPanelVisible(true);
+      // setTimeout(() => {
+      //   setIsErrorPanelVisible(false);
+      // }, 4000);
     }
     if (isSuccess)
       setUrls(
@@ -362,7 +361,7 @@ const UserDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      {isErrorPanelVisible && <ErrorPannel />}
+      {/* {isErrorPanelVisible && <ErrorPannel />} */}
       <header className="bg-blue-500 text-white p-4">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl font-semibold">URL Shortener Dashboard</h1>
