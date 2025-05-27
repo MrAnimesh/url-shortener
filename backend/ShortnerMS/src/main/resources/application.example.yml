@@ -1,0 +1,31 @@
+server:
+  port: 3001  # Local service port
+
+spring:
+  application:
+    name: ShortnerMS  # Microservice name (used in discovery)
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/your_database
+    username: your_username
+    password: your_password
+
+  jpa:
+    hibernate:
+      ddl-auto: update  # Can be 'validate' in prod
+    properties:
+      hibernate:
+        default_schema: url_schema
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      discovery:
+        register: true
+        service-name: ${spring.application.name}
+        healthCheckPath: /actuator/health
+        healthCheckInterval: 15s
+        prefer-ip-address: true
