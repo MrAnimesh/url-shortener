@@ -1,8 +1,8 @@
 package com.urlshortner.service;
 
-import java.util.Map;
-
 import com.urlshortner.dto.UserDTO;
+
+import java.util.Map;
 
 public interface UserService {
 	public Map<String, Object> registerUser(UserDTO userDTO);

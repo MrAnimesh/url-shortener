@@ -1,7 +1,7 @@
 import { p } from "framer-motion/client";
 import { useState } from "react";
 import axiosInstance from "../utility/axiosInstance";
-import ErrorPannel from "./ErrorPannel";
+// import ErrorPannel from "./ErrorPannel";
 
 export default function ChangeSourceCard({
   shortCode,
@@ -17,7 +17,7 @@ export default function ChangeSourceCard({
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     try {
-      const res = await axiosInstance.put("/shortner/private/shorten/replace", {
+      const res = await axiosInstance.put("/api/v1/urls/replace", {
         shortCode: shortCode,
         newUrl: newUrl,
       });

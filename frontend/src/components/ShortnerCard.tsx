@@ -53,7 +53,7 @@ export default function ShortnerCard(props: any) {
     setIsLoading(true);
     if (isLoggedIn) {
       try {
-        const res = await axiosInstance.post("/shortner/private/shorten", {
+        const res = await axiosInstance.post("/api/v1/urls/short", {
           originalUrl: urlForm.originalUrl,
         });
         console.log("url: ", res.data);
@@ -82,7 +82,7 @@ export default function ShortnerCard(props: any) {
     setIsLoading(true);
     if (isLoggedIn) {
       try {
-        const res = await axiosInstance.post("/shortner/shorten/customUrl", {
+        const res = await axiosInstance.post("/api/v1/urls/custom", {
           originalUrl: urlForm.originalUrl,
           customUrl: urlForm.customDomain,
         });

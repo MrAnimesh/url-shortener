@@ -1,22 +1,20 @@
 package com.urlshortner.service;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-
+import com.urlshortner.dto.UserDTO;
+import com.urlshortner.entity.Users;
+import com.urlshortner.entity.VerificationToken;
+import com.urlshortner.repository.UserRepository;
+import com.urlshortner.repository.VerificationTokenRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.urlshortner.dto.UserDTO;
-import com.urlshortner.entity.Users;
-import com.urlshortner.entity.VerificationToken;
-import com.urlshortner.repository.RefreshTokenRepository;
-import com.urlshortner.repository.UserRepository;
-import com.urlshortner.repository.VerificationTokenRepository;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service(value = "userService")
 @Transactional

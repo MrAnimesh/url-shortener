@@ -2,14 +2,14 @@ import axios from "axios";
 import axiosInstance from "./axiosInstance";
 
 export const checkAuth = async () => {
-  axiosInstance.get("/api/verifytoken");
+  axiosInstance.get("/api/v1/auth/verifytoken");
 };
 
 export const logout = async () => {
   const refreshToken = localStorage.getItem("refreshToken");
 
   const response = await axios.post(
-    `http://localhost:8081/api/auth/public/logout`,
+    `http://localhost:8081/api/v1/auth/public/logout`,
     { refreshToken }
   );
 

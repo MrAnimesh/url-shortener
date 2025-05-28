@@ -38,6 +38,10 @@ public class AuthTokenFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
+
+        if (path.startsWith("/verify-password") || path.matches("^/[^/]+$") || path.startsWith("/api/v1/urls/public") || path.startsWith("/actuator/health") || path.startsWith("/api/v1/auth/public")) {
+            return chain.filter(exchange);
+        }
         
         JwtParser parser = Jwts.parser()
                 .verifyWith((SecretKey) key())
@@ -46,14 +50,12 @@ public class AuthTokenFilter implements GlobalFilter, Ordered {
         
 
         
+
+        
+        
+
         String authHeader = request.getHeaders().getFirst("Authorization");
-        
-        
-        
-        if (path.startsWith("/verify-password") || path.matches("^/[A-Za-z0-9]{6}$") || path.startsWith("/api/auth/public") || path.startsWith("/actuator/health") || path.startsWith("/shortner/public")) {
-            return chain.filter(exchange);
-        }
-        
+
 
         // If no auth header, let Spring Security handle it based on path rules
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {

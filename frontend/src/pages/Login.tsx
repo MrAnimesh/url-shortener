@@ -54,7 +54,7 @@ const Login = () => {
   const handleLogin: React.ComponentProps<"form">["onSubmit"] = async (e) => {
     e.preventDefault();
     try{
-      const response = await axios.post("http://localhost:8081/api/auth/public/signin", loginCred)
+      const response = await axios.post("http://localhost:8081/api/v1/auth/public/signin", loginCred)
       const data = await response.data
       console.log(response.data);
       

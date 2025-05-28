@@ -1,14 +1,13 @@
 package com.urlshortner.service;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 
 @Service
 @Transactional
@@ -29,7 +28,7 @@ public class EmailService {
 			helper.setFrom(fromEmail);
 			helper.setTo(toEmail);
 			helper.setSubject("UrlShortner - Please Verify Your Email Address");
-			String verificationUrl = "http://localhost:3000/api/verify?token="+verificationToken;
+			String verificationUrl = "http://localhost:3000/api/v1/auth/public/verify?token="+verificationToken;
 			String emailContent = """
 				<!DOCTYPE html>
 				<html lang="en">

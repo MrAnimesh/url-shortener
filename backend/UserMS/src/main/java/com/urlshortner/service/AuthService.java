@@ -1,13 +1,13 @@
 package com.urlshortner.service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
+import com.urlshortner.entity.RefreshToken;
+import com.urlshortner.exception.CustomAuthenticationException;
+import com.urlshortner.refreshservice.RefreshTokenService;
+import com.urlshortner.security.LoginRequest;
+import com.urlshortner.security.LoginResponse;
+import com.urlshortner.security.UserDetailsImpl;
+import com.urlshortner.utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -15,14 +15,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import com.urlshortner.entity.RefreshToken;
-import com.urlshortner.exception.CustomAuthenticationException;
-import com.urlshortner.refreshservice.RefreshTokenService;
-import com.urlshortner.repository.RefreshTokenRepository;
-import com.urlshortner.security.LoginRequest;
-import com.urlshortner.security.LoginResponse;
-import com.urlshortner.security.UserDetailsImpl;
-import com.urlshortner.utils.JwtUtils;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AuthService {

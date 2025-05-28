@@ -16,7 +16,7 @@ interface Url {
   expiresAt: string;
   maxClicksAllowed: number | null;
   passwordProtected: boolean;
-  password: string;
+  password: string | null;
 }
 
 interface SortConfig {
@@ -92,7 +92,7 @@ const UserDashboard: React.FC = () => {
   // FOR PASSWORD
 
   const fetchAllUrl = async () => {
-    const res = await axiosInstance.get(`/shortner/users/urls`);
+    const res = await axiosInstance.get(`/api/v1/urls`);
     const fetchedData = res.data;
     console.log(fetchedData);
     setUrls(fetchedData);
@@ -116,13 +116,13 @@ const UserDashboard: React.FC = () => {
     try {
       if (active) {
         const res = await axiosInstance.post(
-          `/shortner/url/deactivate/${shortCode}`
+          `/api/v1/urls/deactivate/${shortCode}`
         );
         isSuccess = res.data;
         console.log(res.data);
       } else {
         const res = await axiosInstance.post(
-          `/shortner/url/activate/${shortCode}`
+          `/api/v1/urls/activate/${shortCode}`
         );
         isSuccess = res.data;
         console.log(res.data);
@@ -232,7 +232,7 @@ const UserDashboard: React.FC = () => {
         "Are you sure you want to delete this URL? This action cannot be undone."
       )
     ) {
-      const res = await axiosInstance.delete(`/shortner/delete/${shortCode}`);
+      const res = await axiosInstance.delete(`/api/v1/urls/delete/${shortCode}`);
       setUrls(urls.filter((url) => url.shortUrl !== shortCode));
 
       console.log(res.data);
@@ -277,7 +277,7 @@ const UserDashboard: React.FC = () => {
   const handleRemoveExpiration = async (shortCode: string) => {
     try {
       const res = await axiosInstance.put(
-        `/shortner/url/resetexpires/${shortCode}`
+        `/api/v1/urls/resetExpires/${shortCode}`
       );
       setUrls(
         urls.map((url) =>
@@ -295,7 +295,7 @@ const UserDashboard: React.FC = () => {
       const clicks = Number(maxClicks);
       console.log(clicks);
       const res = await axiosInstance.put(
-        `/shortner/url/expires/${shortCode}/${clicks}`
+        `/api/v1/urls/expires/${shortCode}/${clicks}`
       );
       console.log("res.data: ", res.data);
 
@@ -318,7 +318,7 @@ const UserDashboard: React.FC = () => {
 
     if (shortCode) {
       const res = await axiosInstance.put(
-        `/shortner/url/resetclicks/${shortCode}`
+        `/api/v1/urls/resetClicks/${shortCode}`
       );
       console.log(res.data);
 
@@ -338,7 +338,7 @@ const UserDashboard: React.FC = () => {
     console.log("url: ", shortCode);
     console.log("password value: ", passwordValue);
     try {
-      const res = await axiosInstance.put("/shortner/url/set-password", {
+      const res = await axiosInstance.put("/api/v1/urls/password", {
         urlPassword: passwordValue,
         shortCode: shortCode,
       });
@@ -353,6 +353,20 @@ const UserDashboard: React.FC = () => {
       setActiveShortCode("");
     } catch (err) {}
   };
+
+  const handleResetPassword = async (shortCode: string) => {
+    if(shortCode){
+      const res = await axiosInstance.put(`/api/v1/urls/reset-password/${shortCode}`)
+      console.log(res.data);
+
+        setUrls(
+        urls.map((url) =>
+          url.shortUrl === shortCode ? { ...url, passwordProtected: false, password: null } : url
+        )
+      );
+      
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -426,7 +440,7 @@ const UserDashboard: React.FC = () => {
 
         {/* URLs Table */}
         <div className="bg-white  rounded-lg shadow overflow-x-auto border border-gray-200">
-          <table className="w-full border-collapse">
+          <table className="w-full border-collapse mb-20">
             <thead className="bg-gradient-to-r from-blue-500 to-blue-700 text-white">
               <tr>
                 <th
@@ -726,14 +740,15 @@ const UserDashboard: React.FC = () => {
                         {url.passwordProtected && (
                           <div className="flex items-center justify-center">
                             {/* Show password if visible for this URL */}
-                            {urlPasswordVisible[url.shortUrl] && (
+                            {urlPasswordVisible[url.shortUrl] && !urlEditingPassword[url.shortUrl]&&(
                               <span className="mr-2">{url.password}</span>
                             )}
 
                             {/* Toggle visibility icon - hide when input field is open */}
                             {!urlEditingPassword[url.shortUrl] && (
+                              <div className="flex">
                               <span
-                                className="material-icons w-7 md-18 cursor-pointer mr-2"
+                                className="material-icons w-5 md-18 cursor-pointer"
                                 onClick={() =>
                                   toggleUrlPasswordVisibility(url.shortUrl)
                                 }
@@ -742,7 +757,18 @@ const UserDashboard: React.FC = () => {
                                   ? "visibility_off"
                                   : "visibility_on"}
                               </span>
+                            <button 
+                            className="items-center flex"
+                              onClick={()=>handleResetPassword(url.shortUrl)}
+                            >
+                              <span className="material-icons w-7 md-18 cursor-pointer">
+                                close
+                              </span>
+                            </button>       
+                            </div>                       
                             )}
+
+                              
                           </div>
                         )}
 

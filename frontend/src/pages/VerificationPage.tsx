@@ -18,7 +18,7 @@ const VerificationPage = () => {
 
     try {
       const res = await axios.post(
-        "http://localhost:8081/api/auth/public/regeneratelink",
+        "http://localhost:8081/api/v1/auth/public/regeneratelink",
         { email: response.email }
       );
       setIsLoading(false);

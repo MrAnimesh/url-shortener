@@ -1,16 +1,12 @@
 package com.urlshortner.security;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
+import com.urlshortner.entity.Users;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import com.urlshortner.entity.Users;
+import java.util.Collection;
+import java.util.Collections;
 
 public class UserDetailsImpl implements UserDetails{
 	

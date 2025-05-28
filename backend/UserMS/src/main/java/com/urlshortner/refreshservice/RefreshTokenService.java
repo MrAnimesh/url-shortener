@@ -1,18 +1,15 @@
 package com.urlshortner.refreshservice;
 
-import java.time.Instant;
-import java.util.Optional;
-import java.util.UUID;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import com.urlshortner.entity.RefreshToken;
 import com.urlshortner.exception.TokenExpiredException;
 import com.urlshortner.repository.RefreshTokenRepository;
 import com.urlshortner.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-import jakarta.transaction.Transactional;
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class RefreshTokenService {

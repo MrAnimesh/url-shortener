@@ -190,13 +190,13 @@ const Home: React.FC = () => {
 
     try {
       if (isLoggedIn) {
-        const res = await axiosInstance.post("/shortner/private/shorten", {
+        const res = await axiosInstance.post("/api/v1/urls/short", {
           originalUrl: urlForm.inputUrl,
         });
         setUrlForm((prev) => ({ ...prev, shortUrl: res.data }));
       } else {
         const res = await axios.post(
-          "http://localhost:8081/shortner/public/shorten",
+          "http://localhost:8081/api/v1/urls/public/short",
           {
             originalUrl: urlForm.inputUrl,
           }

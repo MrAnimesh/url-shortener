@@ -52,7 +52,7 @@ function DatePickerCard({ onClose, onSetDate, shortCode, initialDate }: any) {
     console.log("Selected date:", formattedDate);
 
     try {
-      const res = await axiosInstance.put("/shortner/url/expires", {
+      const res = await axiosInstance.put("/api/v1/urls/expires", {
         shortCode: shortCode,
         expiresAt: formattedDate,
       });

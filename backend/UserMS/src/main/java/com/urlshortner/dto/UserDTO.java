@@ -1,11 +1,10 @@
 package com.urlshortner.dto;
 
-import java.time.LocalDateTime;
-
 import com.urlshortner.enums.Role;
-
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 @Data
 public class UserDTO {

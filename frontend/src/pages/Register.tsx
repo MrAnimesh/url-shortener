@@ -62,7 +62,7 @@ const Register: React.FC<{}> = () => {
 
     e.preventDefault();
     try{
-      const response = await axios.post("http://localhost:8081/api/auth/public/register", user);
+      const response = await axios.post("http://localhost:8081/api/v1/auth/public/register", user);
       const data = await response.data
       console.log(response.data)
       setIsSigningUp(false)
@@ -80,7 +80,7 @@ const Register: React.FC<{}> = () => {
     e.preventDefault();
     try {
       const res = await axios.post(
-        "http://localhost:8081/api/auth/public/regeneratelink",
+        "http://localhost:8081/api/v1/auth/public/regeneratelink",
         { email: user.email }
       );
       setIsLoading(false); // Hide loading screen

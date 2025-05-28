@@ -40,28 +40,28 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.Delegate;
 
 @RestController
-@RequestMapping("/shortner")
+@RequestMapping("/api/v1/urls")
 public class UrlApi {
 
     @Autowired
     private UrlServiceImpl urlService;
-    @Autowired 
+    @Autowired
     private UrlValidator urlValidator;
     @Autowired
     private Environment environment;
-    
-    @Autowired
-//    private IpConfig ipConfig;
-    
-//    private IPAddressUtil addressUtil;
-    
-    @GetMapping("/hello")
-    public String sayHello() {
-    	return "Hi";
-    }
 
-    @PostMapping("/public/shorten")
-    public ResponseEntity<String> createShortUrl(@RequestBody UrlFetchDto fetchDto) throws UrlException, IOException{
+//    @Autowired
+//    private IpConfig ipConfig;
+
+//    private IPAddressUtil addressUtil;
+	@GetMapping("/public/hello")
+	public String sayHello() {
+		return "Hi";
+	}
+
+//    @PostMapping("/public/shorten")
+	@PostMapping("/public/short")
+    public ResponseEntity<String> createShortUrlPublic(@RequestBody UrlFetchDto fetchDto) throws UrlException, IOException{
     	if(urlService.isValidUrl(fetchDto.getOriginalUrl())) {
     		Url url = urlService.createShortUrl(fetchDto, null);
     		System.out.println(fetchDto.getOriginalUrl());
@@ -70,10 +70,11 @@ public class UrlApi {
     		System.out.println(fetchDto.getOriginalUrl());
             return new ResponseEntity<>("Invalid Url", HttpStatus.BAD_REQUEST);
     	}
-        
-        
+
+
     }
-    @PostMapping("/private/shorten")
+//    @PostMapping("/private/shorten")
+	@PostMapping("/short")
     public ResponseEntity<String> createShortUrlPrivate(@RequestBody UrlFetchDto fetchDto, @RequestHeader("X-User-Id") String userId) throws UrlException, IOException{
     	if(urlService.isValidUrl(fetchDto.getOriginalUrl())) {
     	Long uId = Long.parseLong(userId);
@@ -83,28 +84,16 @@ public class UrlApi {
     	}else {
     		System.out.println(fetchDto.getOriginalUrl());
             return new ResponseEntity<>("Invalid Url", HttpStatus.BAD_REQUEST);
-    		
+
     	}
     }
-    
-    
-//    @GetMapping("/{shortCode}")
-//    public RedirectView redirectToOriginalUrl(@PathVariable String shortCode, HttpServletRequest httpServletRequest) throws UrlException {
-//    	String clientIp = getClientIpAddress(httpServletRequest);
-//    	System.out.println("Client Ip: "+clientIp);
-////        ipConfig.setupIpInfo(clientIp);
-//    	Url url = urlService.getOriginalUrl(shortCode);
-//    	if (url != null)
-//    		return new RedirectView(url.getOriginalUrl());
-//    	else
-//    		throw new UrlException(environment.getProperty("Service.URL_NOT_FOUND"));
-//    }
-    
-    @PostMapping("/shorten/customUrl")
+
+
+    @PostMapping("/custom")
     public ResponseEntity<String> createCustomShortUrl(@RequestBody UrlFetchForCustomDto fetchDto, @RequestHeader("X-User-Id") String userId){
-    	
-    	Long uId = Long.parseLong(userId); 
-    	
+
+    	Long uId = Long.parseLong(userId);
+
     	if (urlValidator.isValidCustomUrl(fetchDto.getCustomUrl())) {
 	    	if (urlService.createCustomShortUrl(fetchDto, uId)) {
 	    		return new ResponseEntity<String>("http://localhost:8081/"+fetchDto.getCustomUrl(),HttpStatus.CREATED);
@@ -114,71 +103,59 @@ public class UrlApi {
     		return new ResponseEntity<String>(environment.getProperty("API.WRONG_URL"), HttpStatus.BAD_REQUEST);
     	}
     }
-    
-//    @DeleteMapping("/delete")
-//    public ResponseEntity<String> deleteUrl(@RequestBody UrlFetchDto urlToBeDeleted, @RequestHeader("X-User-Id") String userId){
-//    	Long uId = Long.parseLong(userId); 
-//
-//    	if (urlService.deleteCreatedUrl(urlToBeDeleted.getOriginalUrl(), uId) > 0) {
-//    		return new ResponseEntity<String>("Url got deleted", HttpStatus.OK);
-//    	}else {
-//    		return new ResponseEntity<String>("Some error occured", HttpStatus.BAD_REQUEST);
-//    	}
-//    	
-//    }
-    
+
     @DeleteMapping("/delete/{shortCode}")
     public ResponseEntity<String> deleteUrl(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId){
-    	Long uId = Long.parseLong(userId); 
+    	Long uId = Long.parseLong(userId);
 
     	if (urlService.deleteCreatedUrl(shortCode, uId) > 0) {
     		return new ResponseEntity<String>("Url got deleted", HttpStatus.OK);
     	}else {
     		return new ResponseEntity<String>("Some error occured", HttpStatus.BAD_REQUEST);
     	}
-    	
+
     }
-    
-    @PostMapping("/url/activate/{shortCode}")
+
+    @PostMapping("/activate/{shortCode}")
     public ResponseEntity<Boolean> urlActivate(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId){
-    	Long uId = Long.parseLong(userId); 
+    	Long uId = Long.parseLong(userId);
     	if(urlService.activateUrl(shortCode, uId)) {
     		return new ResponseEntity<>(true, HttpStatus.OK);
     	}else {
     		return new ResponseEntity<>(false, HttpStatus.NOT_FOUND);
 
     	}
-    	
+
     }
-    @PostMapping("/url/deactivate/{shortCode}")
+    @PostMapping("/deactivate/{shortCode}")
     public ResponseEntity<Boolean> deactivateUrl(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId){
-    	Long uId = Long.parseLong(userId); 
+    	Long uId = Long.parseLong(userId);
     	if(urlService.deactivateUrl(shortCode, uId)) {
     		return new ResponseEntity<>(true, HttpStatus.OK);
     	}else {
     		return new ResponseEntity<>(false, HttpStatus.NOT_FOUND);
 
     	}
-    	
+
     }
-    
+
 //    @GetMapping("/users/{userId}/urls")
-    @GetMapping("/users/urls")
+    @GetMapping
     public ResponseEntity<List<Url>> getAllUrlOfAUser(@RequestHeader("X-User-Id") String userId){
     	Long Id = Long.parseLong(userId);
     	List<Url> allUrl = urlService.findAllUrls(Id);
     	return new ResponseEntity<>(allUrl, HttpStatus.OK);
     }
-    
-    
-    @PutMapping("/private/shorten/replace")
+
+
+    @PutMapping("/replace")
     public ResponseEntity<String> replaceOriginalUrl(@RequestBody ReplaceUrlDto replaceUrlDto, @RequestHeader("X-User-Id") String userId){
     	Long uId = Long.parseLong(userId);
     	urlService.updateOriginalUrl(replaceUrlDto.getShortCode(), replaceUrlDto.getNewUrl(), uId);
     	return new ResponseEntity<String>(replaceUrlDto.getNewUrl(), HttpStatus.OK);
     }
-    
-    @PutMapping("/url/expires")
+
+    @PutMapping("/expires")
     public ResponseEntity<String> setUserSpecifiedDeactivationTime(@RequestBody DeactivationTimeDto deactivationTimeDto, @RequestHeader("X-User-Id") String userId){
     	if(deactivationTimeDto.getExpiresAt().isBefore(LocalDateTime.now())) {
     		return new ResponseEntity<String>("Please Provide future deactivation time", HttpStatus.NOT_ACCEPTABLE);
@@ -188,60 +165,60 @@ public class UrlApi {
     		return new ResponseEntity<String>("Deactivation time has been set", HttpStatus.OK);
     	else
     		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
-    		
+
     }
-    @PutMapping("/url/resetexpires/{shortCode}")
+    @PutMapping("/resetExpires/{shortCode}")
     public ResponseEntity<String> resetDeactivationTime(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId){
     	Long uId = Long.parseLong(userId);
     	if(urlService.resetDeactivationTime(shortCode,uId) == true)
     		return new ResponseEntity<String>("Deactivation has been reset", HttpStatus.OK);
     	else
     		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
-    		
+
     }
-    
-    @PutMapping("/url/expires/{shortCode}/{maxClicks}")
+
+    @PutMapping("/expires/{shortCode}/{maxClick}")
     public ResponseEntity<String>updateMaxClicksAllowed(@PathVariable("shortCode") String shortCode,
-    													@PathVariable("maxClicks") Long maxClicks, 
+    													@PathVariable("maxClick") Long maxClicks,
     													@RequestHeader("X-User-Id") String userId){
     	Long uId = Long.parseLong(userId);
-    	
+
     	if(urlService.updateMaxClicksAllowed(shortCode, uId, maxClicks)) {
     		return new ResponseEntity<>("Successfully updated maxClicks", HttpStatus.OK);
     	}
     	return new ResponseEntity<>("Something went wrong, please refreshpage and try again.", HttpStatus.BAD_REQUEST);
     }
-    
-    @PutMapping("/url/resetclicks/{shortCode}")
+
+    @PutMapping("/resetClicks/{shortCode}")
     public ResponseEntity<String> resetMaxClicks(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId){
     	Long uId = Long.parseLong(userId);
     	if(urlService.resetMaxClicks(shortCode,uId) == true)
     		return new ResponseEntity<String>("Max clicks has been reset", HttpStatus.OK);
     	else
     		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
-    		
+
     }
-    
-    @PutMapping("/url/set-password")
+
+    @PutMapping("/password")
     public ResponseEntity<String> resetMaxClicks(@RequestBody UrlPasswordDto passwordDto, @RequestHeader("X-User-Id") String userId){
     	Long uId = Long.parseLong(userId);
     	if(urlService.setUrlPassword(passwordDto, uId) == true)
     		return new ResponseEntity<String>("Password has been set", HttpStatus.OK);
     	else
     		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
-    		
-    }    
-    
-    @PutMapping("/url/reset-password/{shortCode}")
+
+    }
+
+    @PutMapping("/reset-password/{shortCode}")
     public ResponseEntity<String> resetUrlPassword(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId){
     	Long uId = Long.parseLong(userId);
     	if(urlService.resetUrlPassword(shortCode,uId) == true)
     		return new ResponseEntity<String>("Password has been reset", HttpStatus.OK);
     	else
     		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
-    		
+
     }
-    
+
 //    private String getClientIpAddress(HttpServletRequest request) {
 //        String xForwardedForHeader = request.getHeader("X-Forwarded-For");
 //        if (xForwardedForHeader == null) {

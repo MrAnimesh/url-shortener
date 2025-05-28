@@ -46,7 +46,7 @@ axiosInstance.interceptors.response.use(
     } else {
       console.log("response: ", error.response);
       // Show error using global function (no need to import anything!)
-      addError("Something went wrong");
+      addError(error?.response?.status+": "+error?.response?.data);
       return Promise.reject(error);
     }
   }
