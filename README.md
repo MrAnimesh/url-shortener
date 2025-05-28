@@ -53,4 +53,4 @@ The screenshot is attached below.
 ```bash
 cd backend
 ./mvnw spring-boot:run -->
-![alt text](home.png) ![alt text](dashboard.png) ![alt text](signup.png) ![alt text](login.png)
+![alt text](screenshots/home.png) ![alt text](screenshots/dashboard.png) ![alt text](screenshots/signup.png) ![alt text](screenshots/login.png)
