@@ -23,7 +23,7 @@ export default function ChangeSourceCard({
       });
       console.log(res.data);
 
-      dataFromChangedSourceCard(res.data, shortCode);
+      dataFromChangedSourceCard(res?.data?.data, shortCode);
       console.log("Successfully updated");
     } catch (error) {
       // setIsErrorPanelVisible(true);

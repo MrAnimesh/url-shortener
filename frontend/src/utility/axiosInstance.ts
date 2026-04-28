@@ -10,6 +10,7 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
     return config;
   },
   (error) => Promise.reject(error)
@@ -46,7 +47,7 @@ axiosInstance.interceptors.response.use(
     } else {
       console.log("response: ", error.response);
       // Show error using global function (no need to import anything!)
-      addError(error?.response?.status+": "+error?.response?.data);
+      addError(error?.response?.status+": "+error?.response?.data?.message);
       return Promise.reject(error);
     }
   }

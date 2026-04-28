@@ -1,5 +1,6 @@
 package com.urlshortner.utils;
 
+import com.urlshortner.enums.Subscription;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.security.Key;
+import java.util.Base64;
 import java.util.Date;
 
 @Component
@@ -32,13 +34,14 @@ public class JwtUtils {
 		return null;
 	}
 	
-	public String generateTokenFromUsername(String username, Long userId) {
+	public String generateTokenFromUsername(String username, Long userId, Subscription sub_type) {
 //		String username = userDetails.getUsername();
 //		System.out.println("user: "+username);
 		
 		return Jwts.builder()
 				.subject(username)
-				.claim("userId", userId.longValue())
+				.claim("userId", userId)
+				.claim("subscriptionType", sub_type)
 				.issuedAt(new Date())
 				.expiration(new Date((new Date()).getTime()+jwtExpiration))
 				.signWith(key())
@@ -46,7 +49,7 @@ public class JwtUtils {
 	}
 	
 	private Key key() {
-		return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
+		return Keys.hmacShaKeyFor(Base64.getDecoder().decode(jwtSecret));
 	}
 	
 	public String getUserNameFromJwtToken(String token) {

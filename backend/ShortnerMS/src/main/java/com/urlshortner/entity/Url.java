@@ -12,6 +12,7 @@ public class Url {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(length = 2048, nullable = false)
     private String originalUrl;
     @Column(unique = true)
     private String shortUrl;

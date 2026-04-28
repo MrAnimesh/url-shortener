@@ -1,9 +1,13 @@
 package com.urlshortner.controller;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
+import com.urlshortner.dto.*;
+import com.urlshortner.service.FeatureAccessService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.autoconfigure.observation.ObservationProperties.Http;
@@ -25,11 +29,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.view.RedirectView;
 
 //import com.urlshortner.config.IpConfig;
-import com.urlshortner.dto.DeactivationTimeDto;
-import com.urlshortner.dto.ReplaceUrlDto;
-import com.urlshortner.dto.UrlFetchDto;
-import com.urlshortner.dto.UrlFetchForCustomDto;
-import com.urlshortner.dto.UrlPasswordDto;
 import com.urlshortner.entity.Url;
 import com.urlshortner.exception.UrlException;
 import com.urlshortner.service.UrlServiceImpl;
@@ -49,6 +48,9 @@ public class UrlApi {
     private UrlValidator urlValidator;
     @Autowired
     private Environment environment;
+
+	@Autowired
+	private FeatureAccessService featureAccessService;
 
 //    @Autowired
 //    private IpConfig ipConfig;
@@ -90,17 +92,37 @@ public class UrlApi {
 
 
     @PostMapping("/custom")
-    public ResponseEntity<String> createCustomShortUrl(@RequestBody UrlFetchForCustomDto fetchDto, @RequestHeader("X-User-Id") String userId){
+    public ResponseEntity<ApiResponse> createCustomShortUrl(@RequestBody UrlFetchForCustomDto fetchDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
+
+		String requiredFeature = "CUSTOM_ALIAS";
+
+		if(!featureAccessService.isFeatureAllowed(sub_type, requiredFeature)){
+			return new ResponseEntity<>( new ErrorResponse("error", "Upgrade to use custom alias."), HttpStatus.METHOD_NOT_ALLOWED);
+//			throw new AccessDeniedException("Upgrade to use custom alias.");
+		}
 
     	Long uId = Long.parseLong(userId);
 
     	if (urlValidator.isValidCustomUrl(fetchDto.getCustomUrl())) {
 	    	if (urlService.createCustomShortUrl(fetchDto, uId)) {
-	    		return new ResponseEntity<String>("http://localhost:8081/"+fetchDto.getCustomUrl(),HttpStatus.CREATED);
+				return new ResponseEntity<>(new SuccessResponse<>(
+						"SUCCESS",
+						"Url Successfully created",
+						"http://localhost:8081/"+fetchDto.getCustomUrl()
+
+				), HttpStatus.CREATED);
+//	    		return new ResponseEntity<String>("http://localhost:8081/"+fetchDto.getCustomUrl(),HttpStatus.CREATED);
 	    	}
-	    	return new ResponseEntity<String>("This Custom Url already exists, Kindly try different one", HttpStatus.CONFLICT);
+			return new ResponseEntity<>(
+					new ErrorResponse("FAILED", "This Custom Url already exists, Kindly try different one"),
+					HttpStatus.CONFLICT
+			);
+//	    	return new ResponseEntity<String>("This Custom Url already exists, Kindly try different one", HttpStatus.CONFLICT);
     	}else {
-    		return new ResponseEntity<String>(environment.getProperty("API.WRONG_URL"), HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<>(
+					new ErrorResponse("FAILED", environment.getProperty("API.WRONG_URL")),
+					HttpStatus.BAD_REQUEST );
+//    		return new ResponseEntity<String>(environment.getProperty("API.WRONG_URL"), HttpStatus.BAD_REQUEST);
     	}
     }
 
@@ -117,23 +139,52 @@ public class UrlApi {
     }
 
     @PostMapping("/activate/{shortCode}")
-    public ResponseEntity<Boolean> urlActivate(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId){
+    public ResponseEntity<ApiResponse> urlActivate(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
+
+		String requiredFeature = "ACTIVATION";
+
+		if(!featureAccessService.isFeatureAllowed(sub_type, requiredFeature)){
+			return new ResponseEntity<>( new ErrorResponse("error", "Upgrade to use Activation/Deactivation."), HttpStatus.METHOD_NOT_ALLOWED);
+//			throw new AccessDeniedException("Upgrade to use custom alias.");
+		}
+
     	Long uId = Long.parseLong(userId);
     	if(urlService.activateUrl(shortCode, uId)) {
-    		return new ResponseEntity<>(true, HttpStatus.OK);
+			return new ResponseEntity<>(new SuccessResponse<>(
+					"SUCCESS",
+					"Url Successfully Activated",
+					true
+
+			), HttpStatus.CREATED);
     	}else {
-    		return new ResponseEntity<>(false, HttpStatus.NOT_FOUND);
+    		return new ResponseEntity<>(new ErrorResponse("FAILED", "This Custom Url already exists, Kindly try different one"),
+					HttpStatus.NOT_FOUND
+			);
 
     	}
 
     }
     @PostMapping("/deactivate/{shortCode}")
-    public ResponseEntity<Boolean> deactivateUrl(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId){
+    public ResponseEntity<ApiResponse> deactivateUrl(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
+
+		String requiredFeature = "ACTIVATION";
+
+		if(!featureAccessService.isFeatureAllowed(sub_type, requiredFeature)){
+			return new ResponseEntity<>( new ErrorResponse("error", "Upgrade to use Activation/Deactivation."), HttpStatus.METHOD_NOT_ALLOWED);
+//			throw new AccessDeniedException("Upgrade to use custom alias.");
+		}
     	Long uId = Long.parseLong(userId);
     	if(urlService.deactivateUrl(shortCode, uId)) {
-    		return new ResponseEntity<>(true, HttpStatus.OK);
-    	}else {
-    		return new ResponseEntity<>(false, HttpStatus.NOT_FOUND);
+    		return new ResponseEntity<>(new SuccessResponse<>(
+					"SUCCESS",
+					"Url Successfully De-activated",
+					true
+
+			), HttpStatus.CREATED);
+		}else {
+			return new ResponseEntity<>(new ErrorResponse("FAILED", "This Custom Url already exists, Kindly try different one"),
+					HttpStatus.NOT_FOUND
+			);
 
     	}
 
@@ -149,75 +200,179 @@ public class UrlApi {
 
 
     @PutMapping("/replace")
-    public ResponseEntity<String> replaceOriginalUrl(@RequestBody ReplaceUrlDto replaceUrlDto, @RequestHeader("X-User-Id") String userId){
+    public ResponseEntity<ApiResponse> replaceOriginalUrl(@RequestBody ReplaceUrlDto replaceUrlDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
+
+		String requiredFeature = "REPLACE";
+
+		if(!featureAccessService.isFeatureAllowed(sub_type, requiredFeature)){
+			return new ResponseEntity<>( new ErrorResponse("error", "Upgrade to use Premium Features."), HttpStatus.METHOD_NOT_ALLOWED);
+		}
+
     	Long uId = Long.parseLong(userId);
     	urlService.updateOriginalUrl(replaceUrlDto.getShortCode(), replaceUrlDto.getNewUrl(), uId);
-    	return new ResponseEntity<String>(replaceUrlDto.getNewUrl(), HttpStatus.OK);
+		return new ResponseEntity<>(new SuccessResponse<>(
+				"SUCCESS",
+				"Source Url Successfully Changed", replaceUrlDto.getNewUrl()
+
+		), HttpStatus.OK);
+//    	return new ResponseEntity<String>(replaceUrlDto.getNewUrl(), HttpStatus.OK);
     }
 
     @PutMapping("/expires")
-    public ResponseEntity<String> setUserSpecifiedDeactivationTime(@RequestBody DeactivationTimeDto deactivationTimeDto, @RequestHeader("X-User-Id") String userId){
+    public ResponseEntity<ApiResponse> setUserSpecifiedDeactivationTime(@RequestBody DeactivationTimeDto deactivationTimeDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
+
+		String requiredFeature = "SET_EXPIRE_TIME";
+
+		if(!featureAccessService.isFeatureAllowed(sub_type, requiredFeature)){
+			return new ResponseEntity<>( new ErrorResponse("error", "Upgrade to use Premium Features."), HttpStatus.METHOD_NOT_ALLOWED);
+		}
+
     	if(deactivationTimeDto.getExpiresAt().isBefore(LocalDateTime.now())) {
-    		return new ResponseEntity<String>("Please Provide future deactivation time", HttpStatus.NOT_ACCEPTABLE);
+			return new ResponseEntity<>( new ErrorResponse("error", "Please Provide future deactivation time."), HttpStatus.METHOD_NOT_ALLOWED);
+//    		return new ResponseEntity<String>("Please Provide future deactivation time", HttpStatus.NOT_ACCEPTABLE);
     	}
     	Long uId = Long.parseLong(userId);
     	if(urlService.setDeactivationTimeByUser(deactivationTimeDto.getShortCode(),uId, deactivationTimeDto.getExpiresAt()) == true)
-    		return new ResponseEntity<String>("Deactivation time has been set", HttpStatus.OK);
+			return new ResponseEntity<>(new SuccessResponse<>(
+					"SUCCESS",
+					"Deactivation time has been set",
+					null
+
+			), HttpStatus.OK);
+//    		return new ResponseEntity<String>("Deactivation time has been set", HttpStatus.OK);
     	else
-    		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<>( new ErrorResponse("error", "There is some problem, please refresh the page."), HttpStatus.INTERNAL_SERVER_ERROR);
+
+//			return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
 
     }
     @PutMapping("/resetExpires/{shortCode}")
-    public ResponseEntity<String> resetDeactivationTime(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId){
+    public ResponseEntity<ApiResponse> resetDeactivationTime(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
+
+		String requiredFeature = "SET_EXPIRE_TIME";
+
+		if(!featureAccessService.isFeatureAllowed(sub_type, requiredFeature)){
+			return new ResponseEntity<>( new ErrorResponse("error", "Upgrade to use Premium Features."), HttpStatus.METHOD_NOT_ALLOWED);
+		}
     	Long uId = Long.parseLong(userId);
     	if(urlService.resetDeactivationTime(shortCode,uId) == true)
-    		return new ResponseEntity<String>("Deactivation has been reset", HttpStatus.OK);
+			return new ResponseEntity<>(new SuccessResponse<>(
+					"SUCCESS",
+					"Deactivation has been reset",
+					null
+
+			), HttpStatus.OK);
+//    		return new ResponseEntity<String>("Deactivation has been reset", HttpStatus.OK);
     	else
-    		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<>( new ErrorResponse("error", "There is some problem, please refresh the page."), HttpStatus.INTERNAL_SERVER_ERROR);
+//    		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
 
     }
 
     @PutMapping("/expires/{shortCode}/{maxClick}")
-    public ResponseEntity<String>updateMaxClicksAllowed(@PathVariable("shortCode") String shortCode,
+    public ResponseEntity<ApiResponse>updateMaxClicksAllowed(@PathVariable("shortCode") String shortCode,
     													@PathVariable("maxClick") Long maxClicks,
-    													@RequestHeader("X-User-Id") String userId){
+    													@RequestHeader("X-User-Id") String userId,
+														@RequestHeader("X-Subscription") String sub_type){
+
+		String requiredFeature = "SET_MAX_CLICK";
+
+		if(!featureAccessService.isFeatureAllowed(sub_type, requiredFeature)){
+			return new ResponseEntity<>( new ErrorResponse("error", "Upgrade to use Premium Features."), HttpStatus.METHOD_NOT_ALLOWED);
+		}
     	Long uId = Long.parseLong(userId);
 
     	if(urlService.updateMaxClicksAllowed(shortCode, uId, maxClicks)) {
-    		return new ResponseEntity<>("Successfully updated maxClicks", HttpStatus.OK);
+			return new ResponseEntity<>(new SuccessResponse<>(
+					"SUCCESS",
+					"Successfully updated maxClicks.",
+					null
+
+			), HttpStatus.OK);
+//    		return new ResponseEntity<>("Successfully updated maxClicks", HttpStatus.OK);
     	}
-    	return new ResponseEntity<>("Something went wrong, please refreshpage and try again.", HttpStatus.BAD_REQUEST);
+		return new ResponseEntity<>( new ErrorResponse("error", "Something went wrong, please refresh page and try again."), HttpStatus.BAD_REQUEST);
+//    	return new ResponseEntity<>("Something went wrong, please refreshpage and try again.", HttpStatus.BAD_REQUEST);
     }
 
     @PutMapping("/resetClicks/{shortCode}")
-    public ResponseEntity<String> resetMaxClicks(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId){
+    public ResponseEntity<ApiResponse> resetMaxClicks(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
+
+		String requiredFeature = "SET_MAX_CLICK";
+
+		if(!featureAccessService.isFeatureAllowed(sub_type, requiredFeature)){
+			return new ResponseEntity<>( new ErrorResponse("error", "Upgrade to use Premium Features."), HttpStatus.METHOD_NOT_ALLOWED);
+		}
     	Long uId = Long.parseLong(userId);
     	if(urlService.resetMaxClicks(shortCode,uId) == true)
-    		return new ResponseEntity<String>("Max clicks has been reset", HttpStatus.OK);
+			return new ResponseEntity<>(new SuccessResponse<>(
+					"SUCCESS",
+					"Max clicks has been reset",
+					null
+
+			), HttpStatus.OK);
+//    		return new ResponseEntity<String>("Max clicks has been reset", HttpStatus.OK);
     	else
-    		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<>( new ErrorResponse("error", "There is some problem, please refresh the page."), HttpStatus.INTERNAL_SERVER_ERROR);
+//    		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
 
     }
-
+//	SET_PASSWORD
     @PutMapping("/password")
-    public ResponseEntity<String> resetMaxClicks(@RequestBody UrlPasswordDto passwordDto, @RequestHeader("X-User-Id") String userId){
+    public ResponseEntity<ApiResponse> resetMaxClicks(@RequestBody UrlPasswordDto passwordDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
+
+		String requiredFeature = "SET_PASSWORD";
+
+		if(!featureAccessService.isFeatureAllowed(sub_type, requiredFeature)){
+			return new ResponseEntity<>( new ErrorResponse("error", "Upgrade to use Premium Features."), HttpStatus.METHOD_NOT_ALLOWED);
+		}
     	Long uId = Long.parseLong(userId);
     	if(urlService.setUrlPassword(passwordDto, uId) == true)
-    		return new ResponseEntity<String>("Password has been set", HttpStatus.OK);
+			return new ResponseEntity<>(new SuccessResponse<>(
+					"SUCCESS",
+					"Password has been set.",
+					null
+
+			), HttpStatus.OK);
+//    		return new ResponseEntity<String>("Password has been set", HttpStatus.OK);
     	else
-    		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<>( new ErrorResponse("error", "There is some problem, please refresh the page."), HttpStatus.INTERNAL_SERVER_ERROR);
+//    		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
 
     }
 
     @PutMapping("/reset-password/{shortCode}")
-    public ResponseEntity<String> resetUrlPassword(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId){
+    public ResponseEntity<ApiResponse> resetUrlPassword(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
+
+		String requiredFeature = "SET_PASSWORD";
+
+		if(!featureAccessService.isFeatureAllowed(sub_type, requiredFeature)){
+			return new ResponseEntity<>( new ErrorResponse("error", "Upgrade to use Premium Features."), HttpStatus.METHOD_NOT_ALLOWED);
+		}
     	Long uId = Long.parseLong(userId);
     	if(urlService.resetUrlPassword(shortCode,uId) == true)
-    		return new ResponseEntity<String>("Password has been reset", HttpStatus.OK);
+			return new ResponseEntity<>(new SuccessResponse<>(
+					"SUCCESS",
+					"Password has been reset.",
+					null
+
+			), HttpStatus.OK);
+//    		return new ResponseEntity<String>("Password has been reset", HttpStatus.OK);
     	else
-    		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<>( new ErrorResponse("error", "There is some problem, please refresh the page."), HttpStatus.INTERNAL_SERVER_ERROR);
+//    		return new ResponseEntity<String>("There is some problem, please refresh the page.", HttpStatus.INTERNAL_SERVER_ERROR);
 
     }
+	@GetMapping("/getFeatures")
+	public ResponseEntity<ApiResponse> getFeaturesAccordingToSubType(@RequestHeader("X-Subscription") String sub_type){
+		return new ResponseEntity<>(new SuccessResponse<>(
+				"SUCCESS",
+				"List of features",
+				Map.of("subscriptionType", sub_type,
+						"featureList", FeatureAccessService.featureMap.get(sub_type))
+
+		), HttpStatus.OK);
+	}
 
 //    private String getClientIpAddress(HttpServletRequest request) {
 //        String xForwardedForHeader = request.getHeader("X-Forwarded-For");

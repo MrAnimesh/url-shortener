@@ -85,10 +85,13 @@ export default function ShortnerCard(props: any) {
         const res = await axiosInstance.post("/api/v1/urls/custom", {
           originalUrl: urlForm.originalUrl,
           customUrl: urlForm.customDomain,
-        });
-        setUrlForm((prev) => ({ ...prev, shortenedUrl: res.data }));
+        }); 
+        console.log(res.data);
+        
+        setUrlForm((prev) => ({ ...prev, shortenedUrl: res?.data?.data }));
         setIsLoading(false);
-      } catch {
+      } catch(err){
+        console.log("CUSTOM_ALIAS: ",err);
         setIsLoading(false);
       }
     }

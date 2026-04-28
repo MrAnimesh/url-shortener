@@ -76,12 +76,15 @@ public class AuthTokenFilter implements GlobalFilter, Ordered {
             Claims claims = jwt.getPayload();
 
             Long userId = claims.get("userId", Long.class);
+            String subType = claims.get("subscriptionType", String.class);
           logger.info("Finally: {}", userId);
+            logger.info("Finally: {}", subType);
           
           String uId = String.valueOf(userId);
             
         	ServerHttpRequest mutatedRequest = request.mutate()
         		    .header("X-User-Id", uId)
+                    .header("X-Subscription", subType)
         		    .build();
         	
             // Token is valid, continue with the filter chain

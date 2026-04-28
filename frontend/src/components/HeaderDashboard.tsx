@@ -2,11 +2,10 @@ import React, { useState, useEffect } from "react";
 import { logout } from "../utility/Utils";
 import { UseGlobalContext } from "../context/GlobalContext";
 
-const Header: React.FC = () => {
+const HeaderDashboard: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activePage, setActivePage] = useState("home");
-  const [loggdIn, setIsLoggedIn] = useState<boolean>(false);
 
   const {isLoggedIn, isPremiumUser} = UseGlobalContext();
 
@@ -24,12 +23,6 @@ const Header: React.FC = () => {
       window.removeEventListener("scroll", handleScroll);
     };
   }, [scrolled]);
-
-  const navItems = [
-    { id: "home", label: "Home" },
-    { id: "features", label: "Features" },
-    { id: "pricing", label: "Pricing" },
-  ];
 
   const handleNavClick = (pageId: string) => {
     setActivePage(pageId);
@@ -60,8 +53,9 @@ const Header: React.FC = () => {
           </div>
           <a className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500"
               href="/home">
-            LinkShort
+            Url Dashboard 
           </a>
+          {isPremiumUser &&<sup>Premium</sup>}
         </div>
 
         {/* Mobile menu button */}
@@ -110,17 +104,6 @@ const Header: React.FC = () => {
                     </a>
                   )}
                 </li>
-                {navItems.map((item) => (
-                  <li key={item.id} className="overflow-hidden">
-                    <a
-                      href={`#${item.id}`}
-                      className={`block py-2 px-4 rounded-md transition-colors hover:bg-indigo-100 text-gray-700`}
-                      onClick={() => handleNavClick(item.id)}
-                    >
-                      {item.label}
-                    </a>
-                  </li>
-                ))}
 
                 {!isLoggedIn ? (
                   <a
@@ -151,22 +134,6 @@ const Header: React.FC = () => {
 
         {/* Desktop navigation */}
         <nav className="hidden md:flex items-center space-x-1">
-          <div className="flex space-x-1 mr-4">
-            {navItems.map((item, index) => (
-              <a
-                key={item.id}
-                href={`/${item.id}`}
-                className={`px-4 py-2 rounded-md transition-all duration-200 ${
-                  activePage === item.id
-                    ? "text-indigo-600 font-medium"
-                    : "text-gray-700 hover:text-indigo-500"
-                } hover:-translate-y-1`}
-                onClick={() => setActivePage(item.id)}
-              >
-                {item.label}
-              </a>
-            ))}
-          </div>
 
           {!isLoggedIn ? (
             <div>
@@ -227,4 +194,4 @@ const Header: React.FC = () => {
     </header>
   );
 };
-export default Header;
+export default HeaderDashboard;

@@ -4,6 +4,8 @@ import ShortnerCard from "../components/ShortnerCard";
 import ChangeSourceCard from "../components/ChangeSourceCard";
 import DatePickerCard from "../components/ChooseDeactivation";
 import Tooltip from "../components/Tooltip";
+import HeaderDashboard from "../components/HeaderDashboard";
+import PremiumOnly from "../components/PremiumOnly";
 
 interface Url {
   id: number;
@@ -118,13 +120,13 @@ const UserDashboard: React.FC = () => {
         const res = await axiosInstance.post(
           `/api/v1/urls/deactivate/${shortCode}`
         );
-        isSuccess = res.data;
+        isSuccess = res?.data?.data;
         console.log(res.data);
       } else {
         const res = await axiosInstance.post(
           `/api/v1/urls/activate/${shortCode}`
         );
-        isSuccess = res.data;
+        isSuccess = res?.data?.data;
         console.log(res.data);
       }
     } catch (error) {
@@ -371,15 +373,16 @@ const UserDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-blue-500 text-white p-4">
+      {/* <header className="bg-blue-500 text-white p-4">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-2xl font-semibold">URL Shortener Dashboard</h1>
           <p>Manage your shortened URLs</p>
         </div>
-      </header>
+      </header> */}
+      <HeaderDashboard/>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto p-4">
+      <main className="max-w-7xl mx-auto p-4 py-28">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white p-4 rounded-lg shadow">
@@ -420,12 +423,14 @@ const UserDashboard: React.FC = () => {
             >
               Short URL
             </button>
+            <PremiumOnly>
             <button
               className="bg-blue-500 text-white font-bold p-2 rounded-lg hover:bg-blue-600 w-full sm:w-auto"
               onClick={renderCustomDomainCard}
             >
               Generate Custome Link
             </button>
+            </PremiumOnly>
           </div>
           {isCardOpen && (
             <ShortnerCard
@@ -590,6 +595,7 @@ const UserDashboard: React.FC = () => {
                         )}
 
                         {/* Set/Edit click limit button */}
+                        <PremiumOnly>
                         <button
                           onClick={() => {
                             setActiveShortCode(url.shortUrl);
@@ -628,6 +634,7 @@ const UserDashboard: React.FC = () => {
                             ></path>
                           </svg>
                         </button>
+                        </PremiumOnly>
 
                         {/* Click limit input popup */}
                         {clicksInputOpen &&
@@ -675,6 +682,7 @@ const UserDashboard: React.FC = () => {
                     {/* Expires at start*/}
 
                     <td className="px-4 py-3 text-sm" >
+                      <PremiumOnly>
                       <div className="relative flex  text-center justify-center">
                         {/* Display current expiration status */}
                         <span
@@ -729,13 +737,16 @@ const UserDashboard: React.FC = () => {
                           />
                         )}
                       </div>
+                      </PremiumOnly>
                     </td>
 
                     {/* expires at end */}
 
                     {/* password starts */}
+                    
 
                     <td className="px-4 py-3 text-sm">
+                      <PremiumOnly>
                       <div className="flex justify-center">
                         {url.passwordProtected && (
                           <div className="flex items-center justify-center">
@@ -820,6 +831,7 @@ const UserDashboard: React.FC = () => {
                           </div>
                         )}
                       </div>
+                      </PremiumOnly>
                     </td>
 
                     {/* password ends */}
@@ -838,6 +850,7 @@ const UserDashboard: React.FC = () => {
 
                           {/* Edit Source */}
                         </button>
+                        <PremiumOnly>
                         <button
                           onClick={() =>
                             handleToggleActive(url.shortUrl, url.active)
@@ -858,6 +871,7 @@ const UserDashboard: React.FC = () => {
                             </Tooltip>
                           )}
                         </button>
+                        </PremiumOnly>
                         <button
                           onClick={() => deleteShortedUrls(url.shortUrl)}
                           className="text-red-500 hover:text-red-700"

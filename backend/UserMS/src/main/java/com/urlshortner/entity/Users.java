@@ -2,6 +2,7 @@ package com.urlshortner.entity;
 
 
 import com.urlshortner.enums.Role;
+import com.urlshortner.enums.Subscription;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -32,6 +33,9 @@ public class Users {
     @Enumerated(EnumType.STRING)
     private Role role = Role.ROLE_ADMIN;
 
+    @Enumerated(EnumType.STRING)
+    private Subscription subscription = Subscription.FREE;
+
     private boolean verified = false;
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -40,5 +44,6 @@ public class Users {
 
     @OneToOne(mappedBy = "users", cascade = CascadeType.ALL)
     private RefreshToken refreshToken;
+
 
 }

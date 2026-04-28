@@ -36,10 +36,10 @@ interface credetenial {
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false); // State to manage login progress
+  // const [isLoggedIn, setisLoggedIn] = useState(false); // State to manage login progress
   const [error, setError] = useState(""); // State to manage error messages
   const navigate = useNavigate()
-  const {setIsLoggedIn} = UseGlobalContext();
+  const {isLoggedIn,setIsLoggedIn} = UseGlobalContext();
 
   const [loginCred, setLoginCred] = useState<credetenial>({
     email: "",
@@ -60,20 +60,20 @@ const Login = () => {
       
       localStorage.setItem("accessToken", data.jwtToken);
       localStorage.setItem('refreshToken', data.refreshToken);
-      localStorage.setItem('email', data.username)
-      localStorage.setItem('userId', data.id)
+      // localStorage.setItem('email', data.username)
+      // localStorage.setItem('userId', data.id)
+      // localStorage.setItem('isPremiumUser', data.isPremiumUser.toString())
       setIsLoggedIn(true);
       // localStorage.setItem("isLoggedIn", "true")
       navigate("/home")
 
     }catch(err){
       console.log("err: ",err);
-
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 p-4">
       {/* Container */}
       <div className="flex flex-col md:flex-row w-full max-w-6xl bg-gray-800 rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-500 hover:scale-101">
         {/* Left Side - Website Info */}
@@ -184,9 +184,9 @@ const Login = () => {
             <button
               type="submit"
               className="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 px-4 rounded-lg font-semibold hover:from-purple-600 hover:to-blue-600 transition-all duration-300 transform hover:scale-101 flex items-center justify-center"
-              disabled={isLoggingIn} // Disable button while logging in
+              disabled={isLoggedIn} // Disable button while logging in
             >
-              {isLoggingIn ? (
+              {isLoggedIn ? (
                 <>
                   <ImSpinner8 className="h-5 w-5 text-white animate-spin mr-2" />
                   Logging In...

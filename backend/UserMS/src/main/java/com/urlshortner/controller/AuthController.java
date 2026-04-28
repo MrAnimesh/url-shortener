@@ -64,6 +64,7 @@ public class AuthController {
     public ResponseEntity<LoginResponse> authenticateUser(@RequestBody LoginRequest loginRequest) {
 
         LoginResponse response = authService.authenticateUser(loginRequest);
+        System.out.println("subscription type in auth controller: " + response.getIsPremiumUser());
         return new ResponseEntity<>(response, HttpStatus.OK);
 
     }
@@ -76,7 +77,7 @@ public class AuthController {
 
         Users user = token.getUsers();
 
-        String newAccessToken = jwtUtils.generateTokenFromUsername(user.getEmail(), user.getId());
+        String newAccessToken = jwtUtils.generateTokenFromUsername(user.getEmail(), user.getId(), user.getSubscription());
 
         TokenRefreshResponse response = new TokenRefreshResponse(newAccessToken, requestRefreshToken);
 

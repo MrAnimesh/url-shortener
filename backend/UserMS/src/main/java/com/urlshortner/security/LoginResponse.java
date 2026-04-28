@@ -1,5 +1,7 @@
 package com.urlshortner.security;
 
+import com.urlshortner.enums.Subscription;
+
 import java.util.List;
 import java.util.Map;
 
@@ -10,17 +12,19 @@ public class LoginResponse {
 	private String refreshToken;
 	private String email;
 	private List<String> roles;
+	private Subscription isPremiumUser;
 	
 	private Map<String, Object> map;
 	
 	
 	
-	public LoginResponse(String jwtToken, String refreshToken, String email, List<String> roles, Long id) {
+	public LoginResponse(String jwtToken, String refreshToken, String email, List<String> roles, Long id, Subscription isPremiumUser) {
 		this.jwtToken = jwtToken;
 		this.email = email;
 		this.roles = roles;
 		this.refreshToken = refreshToken;
 		this.id = id;
+		this.isPremiumUser = isPremiumUser;
 	}
 	
 	public LoginResponse(Map<String, Object> map) {
@@ -58,6 +62,9 @@ public class LoginResponse {
 
 	public void setId(Long id) {
 		this.id = id;
+	}
+	public Subscription getIsPremiumUser() {
+		return isPremiumUser;
 	}
 	
 	

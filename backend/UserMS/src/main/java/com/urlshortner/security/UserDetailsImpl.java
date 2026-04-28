@@ -1,6 +1,7 @@
 package com.urlshortner.security;
 
 import com.urlshortner.entity.Users;
+import com.urlshortner.enums.Subscription;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,6 +18,7 @@ public class UserDetailsImpl implements UserDetails{
 	private String email;
 	private String password;
     private Collection<? extends GrantedAuthority> authorities;
+	private Subscription sub_type;
 	
 
 	public UserDetailsImpl(Users user) {
@@ -24,6 +26,7 @@ public class UserDetailsImpl implements UserDetails{
 		this.password = user.getPassword();
 		this.authorities = Collections.singletonList(new SimpleGrantedAuthority(user.getRole().name()));
 		this.id = user.getId();
+		this.sub_type = user.getSubscription();
 		
 	}
 	
@@ -31,6 +34,10 @@ public class UserDetailsImpl implements UserDetails{
 
 	public Long getId() {
 		return id;
+	}
+
+	public Subscription getSub_type(){
+		return this.sub_type;
 	}
 
 	@Override
