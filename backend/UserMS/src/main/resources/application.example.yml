@@ -29,3 +29,12 @@ spring:
         healthCheckPath: /actuator/health
         healthCheckInterval: 15s
         prefer-ip-address: true
+
+payments:
+  premium:
+    amount: ${PREMIUM_PRICE_PAISE:500}
+    currency: ${PREMIUM_CURRENCY:INR}
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID}
+    key-secret: ${RAZORPAY_KEY_SECRET}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET}

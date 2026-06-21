@@ -37,6 +37,7 @@ public class SecurityConfig {
         http.cors(Customizer.withDefaults())
                 .authorizeHttpRequests(requests ->
                         requests.requestMatchers("/api/v1/auth/public/**").permitAll()
+                                .requestMatchers("/api/v1/payments/webhooks/razorpay").permitAll()
                                 .requestMatchers("/error", "/actuator/**").permitAll()
                                 .anyRequest().authenticated()
                 );

@@ -39,7 +39,7 @@ public class AuthTokenFilter implements GlobalFilter, Ordered {
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
 
-        if (path.startsWith("/verify-password") || path.matches("^/[^/]+$") || path.startsWith("/api/v1/urls/public") || path.startsWith("/actuator/health") || path.startsWith("/api/v1/auth/public")) {
+        if (path.startsWith("/verify-password") || path.matches("^/[^/]+$") || path.startsWith("/api/v1/urls/public") || path.startsWith("/actuator/health") || path.startsWith("/api/v1/auth/public") || path.equals("/api/v1/payments/webhooks/razorpay")) {
             return chain.filter(exchange);
         }
         

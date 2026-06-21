@@ -3,15 +3,21 @@ package com.urlshortner.repository;
 import com.urlshortner.entity.Users;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import jakarta.persistence.LockModeType;
 
 @Repository
 public interface UserRepository extends JpaRepository<Users, Long>{
 	
 	Optional<Users> findByEmail(String email);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from Users u where u.id = :id")
+    Optional<Users> findByIdForUpdate(@Param("id") Long id);
 	
 	boolean existsByEmail(String email);
 	
