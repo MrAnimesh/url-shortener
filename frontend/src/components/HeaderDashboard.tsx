@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { logout } from "../utility/Utils";
 import { UseGlobalContext } from "../context/GlobalContext";
+import PremiumButton from "./PremiumButton";
 
 const HeaderDashboard: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -56,6 +57,9 @@ const HeaderDashboard: React.FC = () => {
             Url Dashboard 
           </a>
           {isPremiumUser &&<sup>Premium</sup>}
+        </div>
+        <div>
+          <PremiumButton />
         </div>
 
         {/* Mobile menu button */}

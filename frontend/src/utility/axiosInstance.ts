@@ -4,6 +4,19 @@ const axiosInstance = axios.create({
   baseURL: "http://localhost:8081",
 });
 
+export const refreshAccessToken = async () => {
+  const refreshToken = localStorage.getItem("refreshToken");
+  if (!refreshToken) throw new Error("Refresh token not found");
+
+  const response = await axios.post(
+    "http://localhost:8081/api/v1/auth/public/refreshtoken",
+    { refreshToken }
+  );
+  const accessToken = response.data.accessToken;
+  localStorage.setItem("accessToken", accessToken);
+  return accessToken;
+};
+
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("accessToken");
@@ -25,16 +38,7 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem("refreshToken");
-        const res = await axios.post(
-          "http://localhost:8081/api/auth/public/refreshtoken",
-          {
-            refreshToken: refreshToken,
-          }
-        );
-
-        const newAccessToken = res.data.accessToken;
-        localStorage.setItem("accessToken", newAccessToken);
+        const newAccessToken = await refreshAccessToken();
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
