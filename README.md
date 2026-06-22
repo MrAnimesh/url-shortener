@@ -24,8 +24,8 @@ The screenshot is attached below.
 - 💻 Frontend in React + TypeScript + TailwindCSS
 - 🛢️ PostgreSQL for data persistence
 - 📊 Visit tracking / Analytics (coming soon)
-- 🔜 Admin Dashboard (Coming soon)
-- 🔜 Premium feature restriction (Coming soon)
+- 🔜 Admin Dashboard 
+- 🔜 Premium feature restriction
 - 🔜 docker based setup (Coming soon)
 - 🔜 google login (Coming soon)
 

@@ -1,11 +1,28 @@
 import {createContext, useState, ReactNode, useContext, useEffect } from "react";
 import { jwtDecode, JwtPayload } from "jwt-decode";
 
+interface AccessTokenClaims extends JwtPayload {
+    subscriptionType?: string;
+    role?: string;
+    permissions?: string[];
+}
+
+interface AuthenticationState {
+    isLoggedIn: boolean;
+    isPremiumUser: boolean;
+    role: string | null;
+    permissions: string[];
+}
+
 interface GlobalContextType {
     isLoggedIn: boolean;
     setIsLoggedIn: (value: boolean) => void;
     isPremiumUser: boolean;
     setIsPremiumUser: (value: boolean) => void;
+    role: string | null;
+    permissions: string[];
+    isAdmin: boolean;
+    hasPermission: (permission: string) => boolean;
   }
   interface GlobalProviderProps {
     children: ReactNode;
@@ -13,39 +30,62 @@ interface GlobalContextType {
 
 export const UserContext = createContext< GlobalContextType | undefined>(undefined);
 
+const emptyAuthentication: AuthenticationState = {
+    isLoggedIn: false,
+    isPremiumUser: false,
+    role: null,
+    permissions: [],
+};
+
+const readAuthentication = (): AuthenticationState => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) return emptyAuthentication;
+
+    try {
+        const claims = jwtDecode<AccessTokenClaims>(token);
+        return {
+            isLoggedIn: true,
+            isPremiumUser: claims.subscriptionType === "PREMIUM",
+            role: claims.role ?? null,
+            permissions: Array.isArray(claims.permissions) ? claims.permissions : [],
+        };
+    } catch {
+        return emptyAuthentication;
+    }
+};
 
 
 export const GlobalProvider = ({children}: GlobalProviderProps) => {
-    const [isLoggedIn, setIsLoggedInState] = useState<boolean>(false);
-    const [isPremiumUser, setIsPremiumUserState] = useState<boolean>(false);
+    const [authentication, setAuthentication] = useState<AuthenticationState>(readAuthentication);
 
     useEffect(() => {
-      const token = localStorage.getItem("accessToken");
-      if (token) {
-        setIsLoggedInState(true);
-        const decodedToken: any = jwtDecode<JwtPayload>(token);
-        console.log("decoded token: ",decodedToken);
-        
-        const premiumUser = decodedToken["subscriptionType"] === "PREMIUM" ? "true" : "false";
-        if (premiumUser) {
-          setIsPremiumUserState(premiumUser === "true");
-        }
-      }
-      
+      const updateAuthentication = () => setAuthentication(readAuthentication());
+      window.addEventListener("auth-token-updated", updateAuthentication);
+      return () => window.removeEventListener("auth-token-updated", updateAuthentication);
     }, []);
 
     const setIsLoggedIn = (value: boolean) => {
-      setIsLoggedInState(value);
-      // localStorage.setItem("isLoggedIn", String(value));
+      setAuthentication(value ? readAuthentication() : emptyAuthentication);
     };
 
     const setIsPremiumUser = (value: boolean) => {
-      setIsPremiumUserState(value);
-      // localStorage.setItem("isPremiumUser", String(value));
+      setAuthentication(current => ({ ...current, isPremiumUser: value }));
     };
 
+    const hasPermission = (permission: string) =>
+      authentication.permissions.includes(permission);
+
     return(
-        <UserContext.Provider value={{ isLoggedIn, setIsLoggedIn, isPremiumUser, setIsPremiumUser }}>
+        <UserContext.Provider value={{
+          isLoggedIn: authentication.isLoggedIn,
+          setIsLoggedIn,
+          isPremiumUser: authentication.isPremiumUser,
+          setIsPremiumUser,
+          role: authentication.role,
+          permissions: authentication.permissions,
+          isAdmin: authentication.role === "ROLE_ADMIN",
+          hasPermission,
+        }}>
         {children}
         </UserContext.Provider >
     );

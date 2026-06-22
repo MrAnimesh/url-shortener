@@ -1,8 +1,23 @@
 import { UseGlobalContext } from "../context/GlobalContext";
 
-function PremiumOnly({ children, fallbackMessage = "Upgrade to Premium" }:any) {
-    const {isPremiumUser} = UseGlobalContext();
-    if (isPremiumUser) {
+interface PremiumOnlyProps {
+    children: React.ReactNode;
+    fallbackMessage?: string;
+    requiredPermissions?: string[];
+    requiresPremium?: boolean;
+}
+
+function PremiumOnly({
+    children,
+    fallbackMessage = "You do not have access to this feature",
+    requiredPermissions = [],
+    requiresPremium = true,
+}: PremiumOnlyProps) {
+    const {isPremiumUser, isAdmin, hasPermission} = UseGlobalContext();
+    const hasRequiredPermissions = isAdmin || requiredPermissions.every(hasPermission);
+    const hasRequiredSubscription = !requiresPremium || isPremiumUser;
+
+    if (hasRequiredPermissions && hasRequiredSubscription) {
         return children;
     }
     return <div className="relative inline-block group">

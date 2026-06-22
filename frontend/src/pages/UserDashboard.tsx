@@ -417,13 +417,15 @@ const UserDashboard: React.FC = () => {
             />
           </div>
           <div className="flex gap-2">
+            <PremiumOnly requiresPremium={false} requiredPermissions={["CREATE_SHORT_URL"]}>
             <button
               className="bg-blue-500 text-white font-bold p-2 rounded-lg hover:bg-blue-600 w-full sm:w-auto"
               onClick={renderChildComponent}
             >
               Short URL
             </button>
-            <PremiumOnly>
+            </PremiumOnly>
+            <PremiumOnly requiredPermissions={["CREATE_SHORT_URL", "CUSTOM_ALIAS"]}>
             <button
               className="bg-blue-500 text-white font-bold p-2 rounded-lg hover:bg-blue-600 w-full sm:w-auto"
               onClick={renderCustomDomainCard}
@@ -595,7 +597,7 @@ const UserDashboard: React.FC = () => {
                         )}
 
                         {/* Set/Edit click limit button */}
-                        <PremiumOnly>
+                        <PremiumOnly requiredPermissions={["SET_MAX_CLICK"]}>
                         <button
                           onClick={() => {
                             setActiveShortCode(url.shortUrl);
@@ -682,7 +684,7 @@ const UserDashboard: React.FC = () => {
                     {/* Expires at start*/}
 
                     <td className="px-4 py-3 text-sm" >
-                      <PremiumOnly>
+                      <PremiumOnly requiredPermissions={["SET_EXPIRE_TIME"]}>
                       <div className="relative flex  text-center justify-center">
                         {/* Display current expiration status */}
                         <span
@@ -746,7 +748,7 @@ const UserDashboard: React.FC = () => {
                     
 
                     <td className="px-4 py-3 text-sm">
-                      <PremiumOnly>
+                      <PremiumOnly requiredPermissions={["SET_PASSWORD"]}>
                       <div className="flex justify-center">
                         {url.passwordProtected && (
                           <div className="flex items-center justify-center">
@@ -840,6 +842,7 @@ const UserDashboard: React.FC = () => {
 
                     <td className="p-4 border-b border-gray-200 text-right">
                       <div className="flex justify-end space-x-2">
+                        <PremiumOnly requiredPermissions={["REPLACE"]}>
                         <button
                           onClick={() => handleEditSource(url.shortUrl)}
                           className="text-blue-500 hover:text-blue-700"
@@ -850,7 +853,8 @@ const UserDashboard: React.FC = () => {
 
                           {/* Edit Source */}
                         </button>
-                        <PremiumOnly>
+                        </PremiumOnly>
+                        <PremiumOnly requiredPermissions={["ACTIVATION"]}>
                         <button
                           onClick={() =>
                             handleToggleActive(url.shortUrl, url.active)
@@ -872,12 +876,14 @@ const UserDashboard: React.FC = () => {
                           )}
                         </button>
                         </PremiumOnly>
+                        <PremiumOnly requiresPremium={false} requiredPermissions={["DELETE_URL"]}>
                         <button
                           onClick={() => deleteShortedUrls(url.shortUrl)}
                           className="text-red-500 hover:text-red-700"
                         >
                           <span className="material-icons">delete_forever</span>
                         </button>
+                        </PremiumOnly>
                       </div>
 
                       {isSourceChangeFocused &&

@@ -14,6 +14,7 @@ export const refreshAccessToken = async () => {
   );
   const accessToken = response.data.accessToken;
   localStorage.setItem("accessToken", accessToken);
+  window.dispatchEvent(new Event("auth-token-updated"));
   return accessToken;
 };
 
@@ -33,7 +34,6 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 

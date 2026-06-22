@@ -2,13 +2,14 @@ import React, { useState, useEffect } from "react";
 import { logout } from "../utility/Utils";
 import { UseGlobalContext } from "../context/GlobalContext";
 import PremiumButton from "./PremiumButton";
+import PremiumOnly from "./PremiumOnly";
 
 const HeaderDashboard: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activePage, setActivePage] = useState("home");
 
-  const {isLoggedIn, isPremiumUser} = UseGlobalContext();
+  const {isLoggedIn, isPremiumUser, isAdmin} = UseGlobalContext();
 
   useEffect(() => {
 
@@ -59,7 +60,18 @@ const HeaderDashboard: React.FC = () => {
           {isPremiumUser &&<sup>Premium</sup>}
         </div>
         <div>
-          <PremiumButton />
+          {/* ADMIN_PANEL */}
+         
+          <div className="flex items-center gap-3">
+            {isAdmin&&(
+               <PremiumOnly requiresPremium={true} requiredPermissions={["ADMIN_PANEL"]}>
+              <a href="/admin/workers" className="font-medium text-indigo-600 hover:text-indigo-800">
+                Workers
+              </a>
+              </PremiumOnly>
+            )}
+            {isAdmin && <PremiumButton />}
+          </div>
         </div>
 
         {/* Mobile menu button */}

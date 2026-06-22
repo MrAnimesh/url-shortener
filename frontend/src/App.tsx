@@ -7,6 +7,8 @@ import UserDashboard from './pages/UserDashboard'
 import { GlobalProvider } from './context/GlobalContext'
 import PrivateRoute from './components/PrivateRoute'
 import { GlobalErrorPanel } from './components/ErrorPannel'
+import AdminRoute from './components/AdminRoute'
+import WorkerManagement from './pages/WorkerManagement'
 
 function App() {
 
@@ -23,6 +25,9 @@ function App() {
         {/* <Route path='/home' element={<Home/>}/> */}
         {/* <Route path='/dashboard' element={token ? <UserDashboard/> : <Login/>} /> */}
         <Route path="/dashboard" element={ <PrivateRoute> <UserDashboard /> </PrivateRoute>}/>
+        <Route path="/admin/workers" element={
+          <PrivateRoute><AdminRoute><WorkerManagement /></AdminRoute></PrivateRoute>
+        }/>
       </Routes>
     </BrowserRouter>
     <GlobalErrorPanel/>
