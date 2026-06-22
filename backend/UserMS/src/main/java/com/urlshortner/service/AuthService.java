@@ -42,7 +42,7 @@ public class AuthService {
 			UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
 			
-			String jwtToken = jwtUtils.generateTokenFromUsername(userDetails.getUsername(), userDetails.getId(), userDetails.getSub_type());
+			String jwtToken = jwtUtils.generateToken(userDetails);
 		    RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getId());
 
 			

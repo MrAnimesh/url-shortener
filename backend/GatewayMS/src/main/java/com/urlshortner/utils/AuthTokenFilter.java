@@ -2,6 +2,8 @@ package com.urlshortner.utils;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.util.List;
+import java.util.stream.Collectors;
 //import java.util.logging.Logger;
 
 import javax.crypto.SecretKey;
@@ -75,16 +77,32 @@ public class AuthTokenFilter implements GlobalFilter, Ordered {
 //             = parser.parseSignedClaims(token);
             Claims claims = jwt.getPayload();
 
-            Long userId = claims.get("userId", Long.class);
+            Number userIdClaim = claims.get("userId", Number.class);
+            Number ownerIdClaim = claims.get("ownerId", Number.class);
+            Long userId = userIdClaim.longValue();
+            Long ownerId = ownerIdClaim == null ? null : ownerIdClaim.longValue();
+            String role = claims.get("role", String.class);
             String subType = claims.get("subscriptionType", String.class);
-          logger.info("Finally: {}", userId);
-            logger.info("Finally: {}", subType);
-          
-          String uId = String.valueOf(userId);
+            List<?> permissionClaims = claims.get("permissions", List.class);
+            String permissions = permissionClaims == null ? "" : permissionClaims.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining(","));
+            Long effectiveOwnerId = ownerId == null ? userId : ownerId;
+            logger.debug("Authenticated actor {} for owner {}", userId, effectiveOwnerId);
             
         	ServerHttpRequest mutatedRequest = request.mutate()
-        		    .header("X-User-Id", uId)
-                    .header("X-Subscription", subType)
+				    .headers(headers -> {
+                            headers.remove("X-Actor-Id");
+                            headers.remove("X-User-Id");
+                            headers.remove("X-Role");
+                            headers.remove("X-Permissions");
+                            headers.remove("X-Subscription");
+                            headers.set("X-Actor-Id", String.valueOf(userId));
+                            headers.set("X-User-Id", String.valueOf(effectiveOwnerId));
+                            headers.set("X-Role", role == null ? "" : role);
+                            headers.set("X-Permissions", permissions);
+                            headers.set("X-Subscription", subType == null ? "FREE" : subType);
+                        })
         		    .build();
         	
             // Token is valid, continue with the filter chain

@@ -1,6 +1,6 @@
 package com.urlshortner.utils;
 
-import com.urlshortner.enums.Subscription;
+import com.urlshortner.security.UserDetailsImpl;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
@@ -34,14 +34,14 @@ public class JwtUtils {
 		return null;
 	}
 	
-	public String generateTokenFromUsername(String username, Long userId, Subscription sub_type) {
-//		String username = userDetails.getUsername();
-//		System.out.println("user: "+username);
-		
+	public String generateToken(UserDetailsImpl userDetails) {
 		return Jwts.builder()
-				.subject(username)
-				.claim("userId", userId)
-				.claim("subscriptionType", sub_type)
+				.subject(userDetails.getUsername())
+				.claim("userId", userDetails.getId())
+				.claim("ownerId", userDetails.getOwnerId())
+				.claim("role", userDetails.getRole())
+				.claim("permissions", userDetails.getPermissions())
+				.claim("subscriptionType", userDetails.getSub_type())
 				.issuedAt(new Date())
 				.expiration(new Date((new Date()).getTime()+jwtExpiration))
 				.signWith(key())

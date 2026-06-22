@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -77,6 +78,7 @@ public class UrlApi {
     }
 //    @PostMapping("/private/shorten")
 	@PostMapping("/short")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('CREATE_SHORT_URL')")
     public ResponseEntity<String> createShortUrlPrivate(@RequestBody UrlFetchDto fetchDto, @RequestHeader("X-User-Id") String userId) throws UrlException, IOException{
     	if(urlService.isValidUrl(fetchDto.getOriginalUrl())) {
     	Long uId = Long.parseLong(userId);
@@ -92,6 +94,7 @@ public class UrlApi {
 
 
     @PostMapping("/custom")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or (hasAuthority('CREATE_SHORT_URL') and hasAuthority('CUSTOM_ALIAS')))")
     public ResponseEntity<ApiResponse> createCustomShortUrl(@RequestBody UrlFetchForCustomDto fetchDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "CUSTOM_ALIAS";
@@ -127,6 +130,7 @@ public class UrlApi {
     }
 
     @DeleteMapping("/delete/{shortCode}")
+    @PreAuthorize("hasRole('ADMIN') or hasAuthority('DELETE_URL')")
     public ResponseEntity<String> deleteUrl(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId){
     	Long uId = Long.parseLong(userId);
 
@@ -139,6 +143,7 @@ public class UrlApi {
     }
 
     @PostMapping("/activate/{shortCode}")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('ACTIVATION'))")
     public ResponseEntity<ApiResponse> urlActivate(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "ACTIVATION";
@@ -165,6 +170,7 @@ public class UrlApi {
 
     }
     @PostMapping("/deactivate/{shortCode}")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('ACTIVATION'))")
     public ResponseEntity<ApiResponse> deactivateUrl(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "ACTIVATION";
@@ -192,6 +198,7 @@ public class UrlApi {
 
 //    @GetMapping("/users/{userId}/urls")
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'WORKER')")
     public ResponseEntity<List<Url>> getAllUrlOfAUser(@RequestHeader("X-User-Id") String userId){
     	Long Id = Long.parseLong(userId);
     	List<Url> allUrl = urlService.findAllUrls(Id);
@@ -200,6 +207,7 @@ public class UrlApi {
 
 
     @PutMapping("/replace")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('REPLACE'))")
     public ResponseEntity<ApiResponse> replaceOriginalUrl(@RequestBody ReplaceUrlDto replaceUrlDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "REPLACE";
@@ -219,6 +227,7 @@ public class UrlApi {
     }
 
     @PutMapping("/expires")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('SET_EXPIRE_TIME'))")
     public ResponseEntity<ApiResponse> setUserSpecifiedDeactivationTime(@RequestBody DeactivationTimeDto deactivationTimeDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "SET_EXPIRE_TIME";
@@ -247,6 +256,7 @@ public class UrlApi {
 
     }
     @PutMapping("/resetExpires/{shortCode}")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('SET_EXPIRE'))")
     public ResponseEntity<ApiResponse> resetDeactivationTime(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "SET_EXPIRE_TIME";
@@ -270,6 +280,7 @@ public class UrlApi {
     }
 
     @PutMapping("/expires/{shortCode}/{maxClick}")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('SET_MAX_CLICK'))")
     public ResponseEntity<ApiResponse>updateMaxClicksAllowed(@PathVariable("shortCode") String shortCode,
     													@PathVariable("maxClick") Long maxClicks,
     													@RequestHeader("X-User-Id") String userId,
@@ -296,6 +307,7 @@ public class UrlApi {
     }
 
     @PutMapping("/resetClicks/{shortCode}")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('SET_MAX_CLICK'))")
     public ResponseEntity<ApiResponse> resetMaxClicks(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "SET_MAX_CLICK";
@@ -319,6 +331,7 @@ public class UrlApi {
     }
 //	SET_PASSWORD
     @PutMapping("/password")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('SET_PASSWORD'))")
     public ResponseEntity<ApiResponse> resetMaxClicks(@RequestBody UrlPasswordDto passwordDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "SET_PASSWORD";
@@ -342,6 +355,7 @@ public class UrlApi {
     }
 
     @PutMapping("/reset-password/{shortCode}")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('SET_PASSWORD'))")
     public ResponseEntity<ApiResponse> resetUrlPassword(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "SET_PASSWORD";
@@ -364,6 +378,7 @@ public class UrlApi {
 
     }
 	@GetMapping("/getFeatures")
+	@PreAuthorize("hasAnyRole('ADMIN', 'WORKER')")
 	public ResponseEntity<ApiResponse> getFeaturesAccordingToSubType(@RequestHeader("X-Subscription") String sub_type){
 		return new ResponseEntity<>(new SuccessResponse<>(
 				"SUCCESS",

@@ -71,7 +71,6 @@ public class ShortUrlController {
         return "redirect:" + url.getOriginalUrl();  // redirect to original URL
 
     }
-    
     @PostMapping("/verify-password")
     public String verifyPassword(
             @RequestParam String shortCode,

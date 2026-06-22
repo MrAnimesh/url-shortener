@@ -9,7 +9,8 @@ import java.util.Set;
 public class FeatureAccessService {
     public static final Map<String, Set<String>>featureMap = Map.of(
             "FREE", Set.of("CREATE_SHORT_URL", "DELETE_URL"),
-            "PREMIUM", Set.of("ACTIVATION","CUSTOM_ALIAS", "SET_PASSWORD", "SET_EXPIRE", "SET_EXPIRE_TIME", "SET_MAX_CLICK","DELETE_URL", "REPLACE")
+            "PREMIUM", Set.of("CREATE_SHORT_URL", "DELETE_URL", "ACTIVATION", "CUSTOM_ALIAS",
+                    "SET_PASSWORD", "SET_EXPIRE", "SET_EXPIRE_TIME", "SET_MAX_CLICK", "REPLACE", "ADMIN_PANEL")
     );
 
     public boolean isFeatureAllowed(String subscription_type, String feature){

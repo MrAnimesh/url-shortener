@@ -7,7 +7,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UserDetailsImpl implements UserDetails{
 	
@@ -19,14 +20,28 @@ public class UserDetailsImpl implements UserDetails{
 	private String password;
     private Collection<? extends GrantedAuthority> authorities;
 	private Subscription sub_type;
+	private Long ownerId;
+	private String role;
+	private List<String> permissions;
+	private boolean enabled;
 	
 
 	public UserDetailsImpl(Users user) {
 		this.email = user.getEmail();
 		this.password = user.getPassword();
-		this.authorities = Collections.singletonList(new SimpleGrantedAuthority(user.getRole().name()));
+		List<GrantedAuthority> grantedAuthorities = new ArrayList<>();
+		grantedAuthorities.add(new SimpleGrantedAuthority(user.getRole().name()));
+		this.permissions = user.getUserPermissions().stream()
+				.map(userPermission -> userPermission.getPermission().getName().name())
+				.sorted()
+				.toList();
+		this.permissions.forEach(permission -> grantedAuthorities.add(new SimpleGrantedAuthority(permission)));
+		this.authorities = grantedAuthorities;
 		this.id = user.getId();
-		this.sub_type = user.getSubscription();
+		this.ownerId = user.getCreatedBy() == null ? user.getId() : user.getCreatedBy().getId();
+		this.sub_type = user.getCreatedBy() == null ? user.getSubscription() : user.getCreatedBy().getSubscription();
+		this.role = user.getRole().name();
+		this.enabled = user.isEnabled();
 		
 	}
 	
@@ -38,6 +53,18 @@ public class UserDetailsImpl implements UserDetails{
 
 	public Subscription getSub_type(){
 		return this.sub_type;
+	}
+
+	public Long getOwnerId() {
+		return ownerId;
+	}
+
+	public String getRole() {
+		return role;
+	}
+
+	public List<String> getPermissions() {
+		return permissions;
 	}
 
 	@Override
@@ -78,8 +105,7 @@ public class UserDetailsImpl implements UserDetails{
 
 	@Override
 	public boolean isEnabled() {
-		// TODO Auto-generated method stub
-		return true;
+		return enabled;
 	}
 
 }

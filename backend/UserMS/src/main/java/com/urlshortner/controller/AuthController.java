@@ -6,11 +6,13 @@ import com.urlshortner.dto.RegenerateRequest;
 import com.urlshortner.dto.UserDTO;
 import com.urlshortner.entity.RefreshToken;
 import com.urlshortner.entity.Users;
+import com.urlshortner.exception.CustomAuthenticationException;
 import com.urlshortner.refreshservice.RefreshTokenService;
 import com.urlshortner.refreshservice.TokenRefreshRequest;
 import com.urlshortner.refreshservice.TokenRefreshResponse;
 import com.urlshortner.security.LoginRequest;
 import com.urlshortner.security.LoginResponse;
+import com.urlshortner.security.UserDetailsImpl;
 import com.urlshortner.service.AuthService;
 import com.urlshortner.service.UserService;
 import com.urlshortner.utils.JwtUtils;
@@ -19,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -39,6 +42,9 @@ public class AuthController {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private UserDetailsService userDetailsService;
 
     @PostMapping("/public/register")
     public ResponseEntity<Map<String, Object>> registerUser(@RequestBody @Valid UserDTO userDTO) {
@@ -76,8 +82,12 @@ public class AuthController {
         RefreshToken token = refreshTokenService.verifyExpiration(refreshToken);
 
         Users user = token.getUsers();
+        UserDetailsImpl userDetails = (UserDetailsImpl) userDetailsService.loadUserByUsername(user.getEmail());
+        if (!userDetails.isEnabled()) {
+            throw new CustomAuthenticationException("Account is disabled");
+        }
 
-        String newAccessToken = jwtUtils.generateTokenFromUsername(user.getEmail(), user.getId(), user.getSubscription());
+        String newAccessToken = jwtUtils.generateToken(userDetails);
 
         TokenRefreshResponse response = new TokenRefreshResponse(newAccessToken, requestRefreshToken);
 
