@@ -4,11 +4,13 @@ import com.urlshortner.dto.*;
 import com.urlshortner.entity.Permission;
 import com.urlshortner.entity.UserPermission;
 import com.urlshortner.entity.Users;
+import com.urlshortner.entity.VerificationToken;
 import com.urlshortner.enums.PermissionName;
 import com.urlshortner.enums.Role;
 import com.urlshortner.repository.PermissionRepository;
 import com.urlshortner.repository.UserPermissionRepository;
 import com.urlshortner.repository.UserRepository;
+import com.urlshortner.repository.VerificationTokenRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -21,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -28,16 +31,22 @@ public class WorkerService {
     private final UserRepository userRepository;
     private final PermissionRepository permissionRepository;
     private final UserPermissionRepository userPermissionRepository;
+    private final VerificationTokenRepository verificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     public WorkerService(UserRepository userRepository,
                          PermissionRepository permissionRepository,
                          UserPermissionRepository userPermissionRepository,
-                         PasswordEncoder passwordEncoder) {
+                         VerificationTokenRepository verificationTokenRepository,
+                         PasswordEncoder passwordEncoder,
+                         EmailService emailService) {
         this.userRepository = userRepository;
         this.permissionRepository = permissionRepository;
         this.userPermissionRepository = userPermissionRepository;
+        this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
     public WorkerResponse createWorker(Long adminId, WorkerCreateRequest request) {
@@ -53,14 +62,24 @@ public class WorkerService {
         worker.setPassword(passwordEncoder.encode(request.getPassword()));
         worker.setRole(Role.ROLE_WORKER);
         worker.setCreatedBy(admin);
-        worker.setVerified(true);
+        worker.setVerified(false);
         worker.setEnabled(true);
 
+        Users savedWorker;
         try {
-            return toWorkerResponse(userRepository.save(worker));
+            savedWorker = userRepository.save(worker);
         } catch (DataIntegrityViolationException exception) {
             throw translateDatabaseConstraint(exception);
         }
+
+        String token = UUID.randomUUID().toString();
+        VerificationToken verificationToken = new VerificationToken();
+        verificationToken.setUsers(savedWorker);
+        verificationToken.setToken(token);
+        verificationTokenRepository.save(verificationToken);
+
+        emailService.sendVerificationEmailToWorker(savedWorker.getEmail(), token);
+        return toWorkerResponse(savedWorker);
     }
 
     @Transactional(readOnly = true)

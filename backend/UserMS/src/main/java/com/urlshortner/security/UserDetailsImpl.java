@@ -24,6 +24,7 @@ public class UserDetailsImpl implements UserDetails{
 	private String role;
 	private List<String> permissions;
 	private boolean enabled;
+	private boolean verified;
 	
 
 	public UserDetailsImpl(Users user) {
@@ -36,12 +37,14 @@ public class UserDetailsImpl implements UserDetails{
 				.sorted()
 				.toList();
 		this.permissions.forEach(permission -> grantedAuthorities.add(new SimpleGrantedAuthority(permission)));
-		this.authorities = grantedAuthorities;
 		this.id = user.getId();
 		this.ownerId = user.getCreatedBy() == null ? user.getId() : user.getCreatedBy().getId();
 		this.sub_type = user.getCreatedBy() == null ? user.getSubscription() : user.getCreatedBy().getSubscription();
+		grantedAuthorities.add(new SimpleGrantedAuthority("SUBSCRIPTION_" + this.sub_type.name()));
+		this.authorities = grantedAuthorities;
 		this.role = user.getRole().name();
 		this.enabled = user.isEnabled();
+		this.verified = user.isVerified();
 		
 	}
 	
@@ -65,6 +68,10 @@ public class UserDetailsImpl implements UserDetails{
 
 	public List<String> getPermissions() {
 		return permissions;
+	}
+
+	public boolean isVerified() {
+		return verified;
 	}
 
 	@Override
@@ -105,7 +112,7 @@ public class UserDetailsImpl implements UserDetails{
 
 	@Override
 	public boolean isEnabled() {
-		return enabled;
+		return enabled && verified;
 	}
 
 }

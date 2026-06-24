@@ -84,6 +84,10 @@ public class AuthController {
         Users user = token.getUsers();
         UserDetailsImpl userDetails = (UserDetailsImpl) userDetailsService.loadUserByUsername(user.getEmail());
         if (!userDetails.isEnabled()) {
+            if (!userDetails.isVerified()) {
+                throw new CustomAuthenticationException(
+                        "Account is pending email verification. Please check your email for the verification link.");
+            }
             throw new CustomAuthenticationException("Account is disabled");
         }
 

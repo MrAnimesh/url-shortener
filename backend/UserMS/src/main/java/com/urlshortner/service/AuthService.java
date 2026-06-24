@@ -3,6 +3,8 @@ package com.urlshortner.service;
 import com.urlshortner.entity.RefreshToken;
 import com.urlshortner.exception.CustomAuthenticationException;
 import com.urlshortner.refreshservice.RefreshTokenService;
+import com.urlshortner.entity.Users;
+import com.urlshortner.repository.UserRepository;
 import com.urlshortner.security.LoginRequest;
 import com.urlshortner.security.LoginResponse;
 import com.urlshortner.security.UserDetailsImpl;
@@ -28,10 +30,10 @@ public class AuthService {
 	
 	@Autowired
 	private RefreshTokenService refreshTokenService;
+	@Autowired
+	private UserRepository userRepository;
 	
 	public LoginResponse authenticateUser(LoginRequest loginRequest) {
-		System.out.println(loginRequest.getEmail());
-		
 		refreshTokenService.deleteExistingRefreshToken(loginRequest.getEmail());
 		
 		try {
@@ -51,10 +53,25 @@ public class AuthService {
 			LoginResponse response = new LoginResponse(jwtToken, refreshToken.getToken(), userDetails.getUsername(), roles, userDetails.getId(), userDetails.getSub_type());
 			System.out.println("subscription type in auth service: " + userDetails.getSub_type());
 			return response;
-		}catch(AuthenticationException e) {			
+		}catch(AuthenticationException e) {
+			Users user = findUser(loginRequest.getEmail());
+			if (user != null && !user.isEnabled()) {
+				throw new CustomAuthenticationException("Account is disabled");
+			}
+			if (user != null && !user.isVerified()) {
+				throw new CustomAuthenticationException(
+						"Account is pending email verification. Please check your email for the verification link.");
+			}
 			throw new CustomAuthenticationException("Invalid email or password");
 		}
 		
+	}
+
+	private Users findUser(String email) {
+		if (email == null || email.isBlank()) {
+			return null;
+		}
+		return userRepository.findByEmail(email.trim().toLowerCase()).orElse(null);
 	}
 	
 	public String logoutUser(String email) {
