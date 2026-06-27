@@ -47,12 +47,10 @@ frontend/pnpm-lock.yaml
 **/coverage/
 
 # =====================
-# Spring Boot Config Files (ignored real, allow examples)
+# Spring Boot Config Files
 # =====================
 **/application.properties
-**/application.yml
-!**/application.example.properties
-!**/application.example.yml
+**/application-*.properties
 
 # =====================
 # Docker

@@ -1,0 +1,29 @@
+server:
+  port: 3001
+
+spring:
+  profiles:
+    default: local
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    properties:
+      hibernate:
+        default_schema: url_schema
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+
+  application:
+    name: ShortnerMS
+
+  cloud:
+    consul:
+      discovery:
+        register: true
+        service-name: ${spring.application.name}
+        health-check-path: /actuator/health
+        health-check-interval: 15s
+        prefer-ip-address: true
