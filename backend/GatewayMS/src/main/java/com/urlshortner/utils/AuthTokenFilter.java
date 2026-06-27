@@ -18,6 +18,7 @@ import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 
 import io.jsonwebtoken.Claims;
@@ -33,8 +34,17 @@ public class AuthTokenFilter implements GlobalFilter, Ordered {
 
     @Value("${spring.app.jwtSecret}")
     private String secret;
+
+    @Value("${app.user-token-check-url:http://UserMS/api/v1/auth/verifytoken}")
+    private String userTokenCheckUrl;
+
+    private final WebClient webClient;
     
     private static final Logger logger = LoggerFactory.getLogger(AuthTokenFilter.class);
+
+    public AuthTokenFilter(WebClient.Builder webClientBuilder) {
+        this.webClient = webClientBuilder.build();
+    }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -89,9 +99,15 @@ public class AuthTokenFilter implements GlobalFilter, Ordered {
                     .collect(Collectors.joining(","));
             Long effectiveOwnerId = ownerId == null ? userId : ownerId;
             logger.debug("Authenticated actor {} for owner {}", userId, effectiveOwnerId);
-            
-        	ServerHttpRequest mutatedRequest = request.mutate()
-				    .headers(headers -> {
+
+            return isTokenActive(authHeader).flatMap(active -> {
+                if (!active) {
+                    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                    return exchange.getResponse().setComplete();
+                }
+
+                ServerHttpRequest mutatedRequest = request.mutate()
+                        .headers(headers -> {
                             headers.remove("X-Actor-Id");
                             headers.remove("X-User-Id");
                             headers.remove("X-Role");
@@ -103,14 +119,24 @@ public class AuthTokenFilter implements GlobalFilter, Ordered {
                             headers.set("X-Permissions", permissions);
                             headers.set("X-Subscription", subType == null ? "FREE" : subType);
                         })
-        		    .build();
-        	
-            // Token is valid, continue with the filter chain
-        	return chain.filter(exchange.mutate().request(mutatedRequest).build());
+                        .build();
+
+                return chain.filter(exchange.mutate().request(mutatedRequest).build());
+            });
         } catch (Exception e) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
+    }
+
+    private Mono<Boolean> isTokenActive(String authHeader) {
+        return webClient.get()
+                .uri(userTokenCheckUrl)
+                .header("Authorization", authHeader)
+                .retrieve()
+                .toBodilessEntity()
+                .map(response -> response.getStatusCode().is2xxSuccessful())
+                .onErrorReturn(false);
     }
 
     @Override

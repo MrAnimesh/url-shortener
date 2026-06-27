@@ -1,40 +1,36 @@
-import React, { useState, useEffect } from "react";
-import { logout } from "../utility/Utils";
+import React, { useEffect, useState } from "react";
 import { UseGlobalContext } from "../context/GlobalContext";
+import { getLoggedInUserName } from "../utility/authUser";
+import { logout } from "../utility/Utils";
 import PremiumButton from "./PremiumButton";
 import PremiumOnly from "./PremiumOnly";
 
 const HeaderDashboard: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [activePage, setActivePage] = useState("home");
-
-  const {isLoggedIn, isPremiumUser, isAdmin} = UseGlobalContext();
+  const { isLoggedIn, isPremiumUser, isAdmin } = UseGlobalContext();
+  const username = getLoggedInUserName();
 
   useEffect(() => {
-
     const handleScroll = () => {
-      const isScrolled = window.scrollY > 10;
-      if (isScrolled !== scrolled) {
-        setScrolled(isScrolled);
-      }
+      setScrolled(window.scrollY > 10);
     };
 
     window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, [scrolled]);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-  const handleNavClick = (pageId: string) => {
-    setActivePage(pageId);
+  const handleLogout = () => {
     setMenuOpen(false);
+    void logout();
   };
 
   return (
     <header
       className={`w-full p-4 fixed top-0 left-0 z-50 transition-all duration-300 ${
-        scrolled ? "bg-white shadow-lg" : "bg-white/90 backdrop-blur-sm"
+        scrolled
+          ? "bg-white shadow-lg border-b border-gray-200"
+          : "bg-white/80 backdrop-blur-sm border-b border-transparent"
       }`}
     >
       <div className="max-w-7xl mx-auto flex justify-between items-center">
@@ -53,161 +49,153 @@ const HeaderDashboard: React.FC = () => {
               />
             </svg>
           </div>
-          <a className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500"
-              href="/home">
-            Url Dashboard 
+          <a
+            className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500"
+            href="/home"
+          >
+            Url Dashboard
           </a>
-          {isPremiumUser &&<sup>Premium</sup>}
-        </div>
-        <div>
-          {/* ADMIN_PANEL */}
-         
-          <div className="flex items-center gap-3">
-            {isAdmin&&(
-               <PremiumOnly requiresPremium={true} requiredPermissions={["ADMIN_PANEL"]}>
-              <a href="/admin/workers" className="font-medium text-indigo-600 hover:text-indigo-800">
-                Workers
-              </a>
-              </PremiumOnly>
-            )}
-            {isAdmin && <PremiumButton />}
-          </div>
+          {isPremiumUser && <sup>Premium</sup>}
         </div>
 
-        {/* Mobile menu button */}
+        <div className="hidden md:flex items-center">
+          {isAdmin && !isPremiumUser && <PremiumButton />}
+        </div>
+
         <div className="md:hidden relative">
           <button
+            type="button"
             onClick={() => setMenuOpen(!menuOpen)}
             className="focus:outline-none p-1 rounded-full bg-gray-100 border border-gray-200 active:scale-90 transition-transform duration-200"
+            aria-label="Open menu"
           >
             <div className="w-6 h-6 flex flex-col justify-center items-center">
               <span
                 className={`w-5 h-0.5 bg-gray-800 block transition-all duration-300 mb-1.5 ${
                   menuOpen ? "rotate-45 translate-y-2" : ""
                 }`}
-              ></span>
+              />
               <span
                 className={`w-5 h-0.5 bg-gray-800 block transition-all duration-300 mb-1.5 ${
                   menuOpen ? "opacity-0" : ""
                 }`}
-              ></span>
+              />
               <span
                 className={`w-5 h-0.5 bg-gray-800 block transition-all duration-300 ${
                   menuOpen ? "-rotate-45 -translate-y-2" : ""
                 }`}
-              ></span>
+              />
             </div>
           </button>
 
           {menuOpen && (
             <div className="absolute right-0 mt-2 w-56 bg-white text-gray-800 rounded-lg shadow-xl p-2 border border-gray-200 overflow-hidden transition-all duration-300">
               <ul className="space-y-1">
-                <li className="pt-2 mt-2 border-b border-gray-200">
-                  {isLoggedIn ? (
-                    <a
-                      href="/login"
-                      className="block py-2 px-4 text-center bg-gradient-to-r from-indigo-500 to-cyan-400 text-white rounded-md font-medium"
-                    >
-                      Animesh Singh
-                    </a>
-                  ) : (
-                    <a
-                      href="/register"
-                      className="block py-2 px-4 text-center bg-gradient-to-r from-indigo-500 to-cyan-400 text-white rounded-md font-medium"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Sign Up Free
-                    </a>
-                  )}
-                </li>
-
-                {!isLoggedIn ? (
-                  <a
-                    href="/login"
-                    className={`block py-2 px-4 rounded-md transition-colors ${
-                      activePage === "login"
-                        ? "bg-indigo-100 text-indigo-700"
-                        : "hover:bg-gray-100 text-gray-700"
-                    }`}
-                    onClick={() => handleNavClick("login")}
-                  >
-                    Login
-                  </a>
+                {isLoggedIn ? (
+                  <>
+                    <li className="py-2 px-4 font-semibold text-indigo-700 border-b border-gray-200">
+                      {username}
+                    </li>
+                    {isAdmin && (
+                      <PremiumOnly
+                        requiresPremium={true}
+                        requiredPermissions={["ADMIN_PANEL"]}
+                      >
+                        <li>
+                          <a
+                            href="/admin/workers"
+                            className="block py-2 px-4 text-gray-700 hover:bg-gray-100 rounded-md font-medium"
+                            onClick={() => setMenuOpen(false)}
+                          >
+                            Admin Panel
+                          </a>
+                        </li>
+                      </PremiumOnly>
+                    )}
+                    <li className="pt-2 mt-2 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="block py-2 px-4 w-full text-left text-gray-700 hover:bg-gray-100 rounded-md font-medium"
+                      >
+                        Logout
+                      </button>
+                    </li>
+                  </>
                 ) : (
-                  <li className="pt-2 mt-2 border-t border-gray-200">
-                    <button
-                      onClick={logout}
-                      className="block py-2 px-4 w-full text-center text-gray-700 hover:bg-gray-100 rounded-md font-medium"
-                    >
-                      Logout
-                    </button>
-                  </li>
+                  <>
+                    <li>
+                      <a
+                        href="/login"
+                        className="block py-2 px-4 rounded-md text-gray-700 hover:bg-gray-100"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Login
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="/register"
+                        className="block py-2 px-4 text-center bg-gradient-to-r from-indigo-500 to-cyan-400 text-white rounded-md font-medium"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Sign Up
+                      </a>
+                    </li>
+                  </>
                 )}
               </ul>
             </div>
           )}
         </div>
 
-        {/* Desktop navigation */}
-        <nav className="hidden md:flex items-center space-x-1">
-
-          {!isLoggedIn ? (
-            <div>
+        <nav className="hidden md:flex items-center gap-3">
+          {isLoggedIn ? (
+            <>
+              <span className="px-4 py-2 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-100">
+                {username}
+              </span>
+              {isAdmin && (
+                <PremiumOnly
+                  requiresPremium={true}
+                  requiredPermissions={["ADMIN_PANEL"]}
+                >
+                  <a
+                    href="/admin/workers"
+                    className="px-4 py-2 rounded-md border border-indigo-200 text-indigo-700 font-medium hover:bg-indigo-50 transition-colors"
+                  >
+                    Admin Panel
+                  </a>
+                </PremiumOnly>
+              )}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-4 py-2 rounded-md border border-gray-200 text-gray-700 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600 font-medium transition-colors"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
               <a
                 href="/login"
-                className={`px-4 py-2 rounded-md transition-all duration-200 ${
-                  activePage === "login"
-                    ? "text-indigo-600 font-medium"
-                    : "text-gray-700 hover:text-indigo-500"
-                } hover:-translate-y-1`}
-                onClick={() => setActivePage("login")}
+                className="px-4 py-2 rounded-md border border-gray-200 text-gray-700 font-medium hover:border-indigo-200 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
               >
                 Login
               </a>
               <a
                 href="/register"
-                className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-cyan-400 text-white font-medium rounded-md shadow-lg hover:scale-105 active:scale-95 transition-transform duration-200"
+                className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-cyan-400 text-white font-medium rounded-md shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all duration-200"
               >
-                Sign Up Free
+                Sign Up
               </a>
-            </div>
-          ) : (
-            <div>
-              <div
-                onClick={() => setMenuOpen(!menuOpen)}
-                className="w-10 h-10 p-2 rounded-full ring-2 ring-indigo-300 cursor-pointer"
-              >
-                <span className="flex font-bold text-center justify-center text-indigo-600">
-                  AN
-                </span>
-              </div>
-              {menuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white text-gray-800 rounded-lg shadow-xl p-2 border border-gray-200 overflow-hidden transition-all duration-300">
-                  <ul className="space-y-1">
-                    <li className="pt-2 mt-2 border-b border-gray-200">
-                      <a
-                        href="/dashboard"
-                        className="block py-2 px-4 text-center bg-gradient-to-r from-indigo-500 to-cyan-400 text-white rounded-md font-medium"
-                      >
-                        Dashboard
-                      </a>
-                    </li>
-                    <li className="pt-2 mt-2 border-t border-gray-200">
-                      <button
-                        onClick={logout}
-                        className="block py-2 px-4 w-full text-center text-gray-700 hover:bg-gray-100 rounded-md font-medium"
-                      >
-                        Logout
-                      </button>
-                    </li>
-                  </ul>
-                </div>
-              )}
-            </div>
+            </>
           )}
         </nav>
       </div>
     </header>
   );
 };
+
 export default HeaderDashboard;

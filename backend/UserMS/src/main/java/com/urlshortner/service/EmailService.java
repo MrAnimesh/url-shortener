@@ -4,6 +4,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,9 @@ public class EmailService {
 	@Value("${spring.mail.username}")
 	private String fromEmail;
 
+	@Value("${app.verification-base-url:http://localhost:8081}")
+	private String verificationBaseUrl;
+
 	public void sendVerificationEmial(String toEmail, String verificationToken) {
 
 		try {
@@ -28,7 +32,7 @@ public class EmailService {
 			helper.setFrom(fromEmail);
 			helper.setTo(toEmail);
 			helper.setSubject("UrlShortner - Please Verify Your Email Address");
-			String verificationUrl = "http://localhost:3000/api/v1/auth/public/verify?token="+verificationToken;
+			String verificationUrl = buildVerificationUrl(verificationToken);
 			String emailContent = """
 				<!DOCTYPE html>
 				<html lang="en">
@@ -127,9 +131,8 @@ public class EmailService {
 			helper.setText(emailContent, true);
 			javaMailSender.send(message);
 
-		} catch (MessagingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (MessagingException | MailException exception) {
+			throw new IllegalStateException("Failed to send verification email.", exception);
 		}
 	}
 
@@ -142,7 +145,7 @@ public class EmailService {
 			helper.setFrom(fromEmail);
 			helper.setTo(toEmail);
 			helper.setSubject("UrlShortner - Please Verify Your Email Address");
-			String verificationUrl = "http://localhost:3000/api/v1/auth/public/verify?token="+verificationToken;
+			String verificationUrl = buildVerificationUrl(verificationToken);
 			String emailContent = """
 				<!DOCTYPE html>
 				<html lang="en">
@@ -241,10 +244,13 @@ public class EmailService {
 			helper.setText(emailContent, true);
 			javaMailSender.send(message);
 
-		} catch (MessagingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (MessagingException | MailException exception) {
+			throw new IllegalStateException("Failed to send verification email.", exception);
 		}
+	}
+
+	private String buildVerificationUrl(String verificationToken) {
+		return verificationBaseUrl.replaceAll("/+$", "") + "/api/v1/auth/public/verify?token=" + verificationToken;
 	}
 
 

@@ -1,12 +1,10 @@
-import React from 'react'
-import Home from '../pages/Home'
-import Login from '../pages/Login'
+import Home from "../pages/Home";
+import Login from "../pages/Login";
 
 const RouteHomeLogin = () => {
+  const token = localStorage.getItem("accessToken");
 
-    const token = localStorage.getItem("accessToken")
+  return token ? <Home /> : <Login />;
+};
 
-  return token ? <Home/> : <Login/>
-}
-
-export default RouteHomeLogin
+export default RouteHomeLogin;

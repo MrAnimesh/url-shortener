@@ -12,9 +12,7 @@ public class UrlCleanupScheduler {
 	@Autowired
 	private UrlRepository urlRepository;
 	
-//	@Scheduled(cron = "0 0 0 * * ?")
-//	@Scheduled(cron = "0 */2 * * * ?", zone = "Asia/Kolkata")
-	@Scheduled(cron = "0 13 21 * * ?", zone = "Asia/Kolkata")
+	@Scheduled(cron = "0 */5 * * * ?", zone = "Asia/Kolkata")
 	public void cleanupAnonymousUrls() {
 		urlRepository.deleteOldAnonymousUrls();
 	}

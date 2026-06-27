@@ -30,12 +30,12 @@ public class AuthTokenFilter extends OncePerRequestFilter{
 			throws ServletException, IOException {
 		
 		List<String> excludedPaths = Arrays.asList(
-		        "/api/auth/public/refreshtoken",
-		        "/api/auth/public/signin",
+		        "/api/v1/auth/public/refreshtoken",
+		        "/api/v1/auth/public/signin",
+		        "/api/v1/auth/public/verify",
 		        "/actuator/health"
 		    );
 		String path = request.getRequestURI();
-//		System.out.println(path);
 //		if(path.equals("/userms/refreshtoken")) {
 //			filterChain.doFilter(request, response);
 //			return;
@@ -64,7 +64,7 @@ public class AuthTokenFilter extends OncePerRequestFilter{
 				
 			}
 		}catch(Exception e) {
-			System.out.println("Can't set user authentication: {}"+e);
+			SecurityContextHolder.clearContext();
 		}
 		
 		filterChain.doFilter(request, response);
@@ -72,9 +72,7 @@ public class AuthTokenFilter extends OncePerRequestFilter{
 	}
 	
 	private String parseJwt(HttpServletRequest request) {
-		String jwt = jwtUtils.getJwtFromHeader(request);
-		System.out.println("JWT from header: " + jwt);
-		return jwt;
+		return jwtUtils.getJwtFromHeader(request);
 	}
 	
 	

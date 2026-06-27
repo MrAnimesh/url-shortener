@@ -6,6 +6,9 @@ import DatePickerCard from "../components/ChooseDeactivation";
 import Tooltip from "../components/Tooltip";
 import HeaderDashboard from "../components/HeaderDashboard";
 import PremiumOnly from "../components/PremiumOnly";
+import QrCodeModal from "../components/QrCodeModal";
+import { getPublicShortUrl } from "../utility/config";
+import { UseGlobalContext } from "../context/GlobalContext";
 
 interface Url {
   id: number;
@@ -19,14 +22,70 @@ interface Url {
   maxClicksAllowed: number | null;
   passwordProtected: boolean;
   password: string | null;
+  qrCodeAvailable: boolean;
 }
 
+interface QrDetail {
+  id: number;
+  urlId: number;
+  grid: boolean[][];
+}
+
+type SortField =
+  | "originalUrl"
+  | "shortUrl"
+  | "createdAt"
+  | "count"
+  | "active"
+  | "expiresAt";
+
 interface SortConfig {
-  key: keyof Url;
+  key: SortField;
   direction: "asc" | "desc";
 }
 
+const compareDates = (firstDate: string, secondDate: string) => {
+  return new Date(firstDate).getTime() - new Date(secondDate).getTime();
+};
+
+const compareUrls = (firstUrl: Url, secondUrl: Url, field: SortField) => {
+  switch (field) {
+    case "originalUrl":
+      return firstUrl.originalUrl.localeCompare(secondUrl.originalUrl);
+    case "shortUrl":
+      return firstUrl.shortUrl.localeCompare(secondUrl.shortUrl);
+    case "createdAt":
+      return compareDates(firstUrl.createdAt, secondUrl.createdAt);
+    case "expiresAt":
+      return compareDates(firstUrl.expiresAt, secondUrl.expiresAt);
+    case "count":
+      return firstUrl.count - secondUrl.count;
+    case "active":
+      return Number(firstUrl.active) - Number(secondUrl.active);
+  }
+};
+
+const sortUrls = (urls: Url[], sortConfig: SortConfig) => {
+  const sortedUrls = [...urls];
+
+  sortedUrls.sort((firstUrl, secondUrl) => {
+    if (sortConfig.key === "expiresAt") {
+      if (!firstUrl.expiresAt && !secondUrl.expiresAt) return 0;
+      if (!firstUrl.expiresAt) return 1;
+      if (!secondUrl.expiresAt) return -1;
+    }
+
+    const comparison = compareUrls(firstUrl, secondUrl, sortConfig.key);
+    return sortConfig.direction === "asc" ? comparison : -comparison;
+  });
+
+  return sortedUrls;
+};
+
 const UserDashboard: React.FC = () => {
+  const { isPremiumUser, isAdmin, hasPermission } = UseGlobalContext();
+  const canUseQrCode =
+    isPremiumUser && (isAdmin || hasPermission("CREATE_SHORT_URL"));
   const [urls, setUrls] = useState<Url[]>([]);
 
   const [isCardOpen, setIsCardOpen] = useState<boolean>(false);
@@ -40,6 +99,11 @@ const UserDashboard: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [maxClicks, setMaxClicks] = useState("");
   const [clicksInputOpen, setClickInputOpen] = useState(false);
+  const [qrLoadingUrlId, setQrLoadingUrlId] = useState<number | null>(null);
+  const [selectedQr, setSelectedQr] = useState<{
+    detail: QrDetail;
+    shortCode: string;
+  } | null>(null);
 
   // FOR PASSWORD
   const [urlPasswordVisible, setUrlPasswordVisible] = useState<{
@@ -54,14 +118,14 @@ const UserDashboard: React.FC = () => {
 
   // Helper functions
   const toggleUrlPasswordVisibility = (shortUrl: string) => {
-    setUrlPasswordVisible((prev: any) => ({
+    setUrlPasswordVisible((prev) => ({
       ...prev,
       [shortUrl]: !prev[shortUrl],
     }));
   };
 
   const toggleUrlPasswordEdit = (shortUrl: string) => {
-    setUrlEditingPassword((prev: any) => ({
+    setUrlEditingPassword((prev) => ({
       ...prev,
       [shortUrl]: !prev[shortUrl],
     }));
@@ -148,10 +212,35 @@ const UserDashboard: React.FC = () => {
 
   const handleCopy = async (shortUrl: string): Promise<void> => {
     try {
-      await navigator.clipboard.writeText("localhost:8081/" + shortUrl);
+      await navigator.clipboard.writeText(getPublicShortUrl(shortUrl));
       alert("URL copied to clipboard!");
     } catch (err) {
       alert("Failed to copy URL: " + err);
+    }
+  };
+
+  const handleQrCode = async (url: Url) => {
+    if (!canUseQrCode) return;
+
+    setQrLoadingUrlId(url.id);
+
+    try {
+      const response = url.qrCodeAvailable
+        ? await axiosInstance.get<QrDetail>(`/api/v1/qr/${url.id}`)
+        : await axiosInstance.post<QrDetail>("/api/v1/qr", { urlId: url.id });
+
+      setUrls((currentUrls) =>
+        currentUrls.map((currentUrl) =>
+          currentUrl.id === url.id
+            ? { ...currentUrl, qrCodeAvailable: true }
+            : currentUrl
+        )
+      );
+      setSelectedQr({ detail: response.data, shortCode: url.shortUrl });
+    } catch {
+      return;
+    } finally {
+      setQrLoadingUrlId(null);
     }
   };
 
@@ -182,28 +271,15 @@ const UserDashboard: React.FC = () => {
     return url.length > maxLength ? url.substring(0, maxLength) + "..." : url;
   };
 
-  const requestSort = (key: keyof Url): void => {
-    let direction: "asc" | "desc" = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
+  const requestSort = (key: SortField) => {
+    const isCurrentField = sortConfig.key === key;
+    const isAscending = sortConfig.direction === "asc";
+    const direction = isCurrentField && isAscending ? "desc" : "asc";
+
     setSortConfig({ key, direction });
   };
 
-  const sortedUrls = [...urls].sort((a, b) => {
-    const aValue = a[sortConfig.key];
-    const bValue = b[sortConfig.key];
-
-    // Handle null values explicitly
-    if (aValue === null && bValue === null) return 0;
-    if (aValue === null) return 1; // Put nulls last
-    if (bValue === null) return -1;
-
-    if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-    if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-
-    return 0;
-  });
+  const sortedUrls = sortUrls(urls, sortConfig);
 
   const filteredUrls = sortedUrls.filter(
     (url) =>
@@ -211,7 +287,7 @@ const UserDashboard: React.FC = () => {
       url.shortUrl.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getSortIndicator = (key: keyof Url): string => {
+  const getSortIndicator = (key: SortField): string => {
     if (sortConfig.key === key) {
       return sortConfig.direction === "asc" ? " ↑" : " ↓";
     }
@@ -278,16 +354,14 @@ const UserDashboard: React.FC = () => {
 
   const handleRemoveExpiration = async (shortCode: string) => {
     try {
-      const res = await axiosInstance.put(
-        `/api/v1/urls/resetExpires/${shortCode}`
-      );
+      await axiosInstance.put(`/api/v1/urls/resetExpires/${shortCode}`);
       setUrls(
         urls.map((url) =>
           url.shortUrl === shortCode ? { ...url, expiresAt: "" } : url
         )
       );
-    } catch (error) {
-      console.log("Some error occured");
+    } catch {
+      console.log("Some error occurred");
     }
   };
 
@@ -353,7 +427,9 @@ const UserDashboard: React.FC = () => {
         )
       );
       setActiveShortCode("");
-    } catch (err) {}
+    } catch (err) {
+      console.log("Unable to set password", err);
+    }
   };
 
   const handleResetPassword = async (shortCode: string) => {
@@ -371,40 +447,39 @@ const UserDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      {/* <header className="bg-blue-500 text-white p-4">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-2xl font-semibold">URL Shortener Dashboard</h1>
-          <p>Manage your shortened URLs</p>
-        </div>
-      </header> */}
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
       <HeaderDashboard/>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto p-4 py-28">
-        {/* Stats Cards */}
+      <main className="max-w-7xl mx-auto px-4 pt-32 pb-12">
+        <div className="mb-8">
+          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500">
+            URL Dashboard
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Manage your shortened links, click limits, expiry settings, and passwords.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="bg-white/95 p-5 rounded-lg shadow-sm border border-gray-200">
             <h3 className="text-sm font-medium text-gray-600">Total URLs</h3>
-            <p className="text-xl font-bold">{urls.length}</p>
+            <p className="mt-2 text-3xl font-bold text-gray-900">{urls.length}</p>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="bg-white/95 p-5 rounded-lg shadow-sm border border-gray-200">
             <h3 className="text-sm font-medium text-gray-600">Active URLs</h3>
-            <p className="text-xl font-bold">
+            <p className="mt-2 text-3xl font-bold text-indigo-600">
               {urls.filter((url) => url.active).length}
             </p>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="bg-white/95 p-5 rounded-lg shadow-sm border border-gray-200">
             <h3 className="text-sm font-medium text-gray-600">Total Clicks</h3>
-            <p className="text-xl font-bold">
+            <p className="mt-2 text-3xl font-bold text-cyan-600">
               {urls.reduce((sum, url) => sum + url.count, 0)}
             </p>
           </div>
         </div>
 
-        {/* Search and Add New */}
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 bg-white/95 border border-gray-200 shadow-sm rounded-lg p-4">
           <div className="w-full sm:w-64">
             <input
               type="text"
@@ -413,13 +488,14 @@ const UserDashboard: React.FC = () => {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setSearchTerm(e.target.value)
               }
-              className="w-full p-2 border rounded"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <PremiumOnly requiresPremium={false} requiredPermissions={["CREATE_SHORT_URL"]}>
             <button
-              className="bg-blue-500 text-white font-bold p-2 rounded-lg hover:bg-blue-600 w-full sm:w-auto"
+              type="button"
+              className="bg-gradient-to-r from-indigo-500 to-cyan-400 text-white font-semibold px-4 py-3 rounded-lg shadow-md hover:shadow-lg active:scale-95 transition-all w-full sm:w-auto"
               onClick={renderChildComponent}
             >
               Short URL
@@ -427,10 +503,11 @@ const UserDashboard: React.FC = () => {
             </PremiumOnly>
             <PremiumOnly requiredPermissions={["CREATE_SHORT_URL", "CUSTOM_ALIAS"]}>
             <button
-              className="bg-blue-500 text-white font-bold p-2 rounded-lg hover:bg-blue-600 w-full sm:w-auto"
+              type="button"
+              className="border border-indigo-200 text-indigo-700 font-semibold px-4 py-3 rounded-lg hover:bg-indigo-50 transition-colors w-full sm:w-auto"
               onClick={renderCustomDomainCard}
             >
-              Generate Custome Link
+              Generate Custom Link
             </button>
             </PremiumOnly>
           </div>
@@ -445,53 +522,55 @@ const UserDashboard: React.FC = () => {
           )}
         </div>
 
-        {/* URLs Table */}
-        <div className="bg-white  rounded-lg shadow overflow-x-auto border border-gray-200">
+        <div className="bg-white/95 rounded-lg shadow-sm overflow-x-auto border border-gray-200">
           <table className="w-full border-collapse mb-20">
-            <thead className="bg-gradient-to-r from-blue-500 to-blue-700 text-white">
+            <thead className="bg-gray-50 text-gray-700">
               <tr>
                 <th
-                  className="p-4 text-center font-semibold cursor-pointer border-b border-gray-300 hover:bg-blue-600 transition"
+                  className="p-4 text-center font-semibold cursor-pointer border-b border-gray-200 hover:bg-indigo-50 transition"
                   onClick={() => requestSort("originalUrl")}
                 >
                   Original URL{getSortIndicator("originalUrl")}
                 </th>
                 <th
-                  className="p-4 text-center font-semibold cursor-pointer border-b border-gray-300 hover:bg-blue-600 transition"
+                  className="p-4 text-center font-semibold cursor-pointer border-b border-gray-200 hover:bg-indigo-50 transition"
                   onClick={() => requestSort("shortUrl")}
                 >
                   Short URL{getSortIndicator("shortUrl")}
                 </th>
                 <th
-                  className="p-4 text-center font-semibold cursor-pointer border-b border-gray-300 hover:bg-blue-600 transition"
+                  className="p-4 text-center font-semibold cursor-pointer border-b border-gray-200 hover:bg-indigo-50 transition"
                   onClick={() => requestSort("createdAt")}
                 >
                   Created{getSortIndicator("createdAt")}
                 </th>
                 <th
-                  className="p-4 text-center font-semibold cursor-pointer border-b border-gray-300 hover:bg-blue-600 transition"
+                  className="p-4 text-center font-semibold cursor-pointer border-b border-gray-200 hover:bg-indigo-50 transition"
                   onClick={() => requestSort("count")}
                 >
                   Clicks{getSortIndicator("count")}
                 </th>
                 <th
-                  className="p-4 text-center font-semibold cursor-pointer border-b border-gray-300 hover:bg-blue-600 transition"
+                  className="p-4 text-center font-semibold cursor-pointer border-b border-gray-200 hover:bg-indigo-50 transition"
                   onClick={() => requestSort("active")}
                 >
                   Status{getSortIndicator("active")}
                 </th>
-                <th className="p-4 text-center font-semibold border-b border-gray-300">
+                <th className="p-4 text-center font-semibold border-b border-gray-200">
                   Max Clicks Allowed
                 </th>
-                <th className="p-4 text-center font-semibold border-b border-gray-300"
+                <th className="p-4 text-center font-semibold border-b border-gray-200"
                     onClick={() => requestSort("expiresAt")}
                 >
                   Expires {getSortIndicator("expiresAt")}
                 </th>
-                <th className="p-4 text-center font-semibold border-b border-gray-300">
+                <th className="p-4 text-center font-semibold border-b border-gray-200">
                   Password
                 </th>
-                <th className="p-4 text-center font-semibold border-b border-gray-300">
+                <th className="p-4 text-center font-semibold border-b border-gray-200">
+                  QR Code
+                </th>
+                <th className="p-4 text-center font-semibold border-b border-gray-200">
                   Actions
                 </th>
               </tr>
@@ -503,7 +582,7 @@ const UserDashboard: React.FC = () => {
                     key={url.id}
                     className={`${
                       url.active
-                        ? "hover:bg-blue-50"
+                        ? "hover:bg-indigo-50/60"
                         : "bg-gray-50 hover:bg-gray-100"
                     } transition duration-200`}
                   >
@@ -519,9 +598,13 @@ const UserDashboard: React.FC = () => {
                           href={url.originalUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="ml-2 text-blue-500 hover:text-blue-700"
+                          className="ml-2 text-indigo-500 hover:text-indigo-700"
                         >
-                          <span className="material-icons md-18">
+                          <span
+                            className={`material-icons md-18 ${
+                              qrLoadingUrlId === url.id ? "animate-spin" : ""
+                            }`}
+                          >
                             open_in_new
                           </span>
                         </a>
@@ -530,16 +613,17 @@ const UserDashboard: React.FC = () => {
                     <td className="p-4 border-b border-gray-200">
                       <div className="flex items-center">
                         <a
-                          href={`https://${url.shortUrl}`}
+                          href={getPublicShortUrl(url.shortUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-500 hover:text-blue-700 text-sm"
+                          className="text-indigo-600 hover:text-indigo-800 text-sm"
                         >
-                          http://localhost:8081/{url.shortUrl}
+                          {getPublicShortUrl(url.shortUrl)}
                         </a>
                         <button
+                          type="button"
                           onClick={() => handleCopy(url.shortUrl)}
-                          className="ml-2 text-blue-500 hover:text-blue-700"
+                          className="ml-2 text-indigo-500 hover:text-indigo-700"
                         >
                           <span className="material-icons md-18">
                             content_copy
@@ -554,7 +638,15 @@ const UserDashboard: React.FC = () => {
                       {url.count}
                     </td>
                     <td className="p-4 border-b border-gray-200">
-                      {url.active ? "Active" : "Inactive"}
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          url.active
+                            ? "bg-green-50 text-green-700 border border-green-100"
+                            : "bg-gray-100 text-gray-600 border border-gray-200"
+                        }`}
+                      >
+                        {url.active ? "Active" : "Inactive"}
+                      </span>
                     </td>
 
                     {/* Number of clicks start */}
@@ -608,7 +700,7 @@ const UserDashboard: React.FC = () => {
                                 : ""
                             );
                           }}
-                          className="ml-1 text-gray-400 hover:text-blue-600"
+                          className="ml-1 text-gray-400 hover:text-indigo-600"
                           title={
                             url.maxClicksAllowed
                               ? "Change click limit"
@@ -641,7 +733,7 @@ const UserDashboard: React.FC = () => {
                         {/* Click limit input popup */}
                         {clicksInputOpen &&
                           url.shortUrl === activeShortCode && (
-                            <div className="absolute left-0 mt-1 w-48 bg-white shadow-lg rounded-md border z-10 p-3">
+                            <div className="absolute left-0 mt-1 w-48 bg-white shadow-lg rounded-md border border-gray-200 z-10 p-3">
                               <label className="block text-xs text-gray-700 mb-1">
                                 Max number of clicks:
                               </label>
@@ -650,7 +742,7 @@ const UserDashboard: React.FC = () => {
                                 min="1"
                                 value={maxClicks}
                                 onChange={(e) => setMaxClicks(e.target.value)}
-                                className="w-full p-1 border rounded text-sm mb-2"
+                                className="w-full p-2 border border-gray-300 rounded text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-400"
                                 placeholder="Enter click limit"
                               />
                               <div className="flex justify-end space-x-2 pt-2">
@@ -660,7 +752,7 @@ const UserDashboard: React.FC = () => {
                                     setClickInputOpen(false);
                                     setMaxClicks("");
                                   }}
-                                  className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                                  className="px-2 py-1 text-xs border border-gray-200 text-gray-700 rounded hover:bg-gray-50"
                                 >
                                   Cancel
                                 </button>
@@ -668,7 +760,7 @@ const UserDashboard: React.FC = () => {
                                   onClick={() =>
                                     handleSetClickLimit(url.shortUrl)
                                   }
-                                  className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                                  className="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-300"
                                   disabled={maxClicks === ""}
                                 >
                                   Apply
@@ -709,10 +801,10 @@ const UserDashboard: React.FC = () => {
                         {/* Set/Edit expiration button */}
                         <button
                           onClick={() => {
-                            setShowDatePicker(true),
-                              setActiveShortCode(url.shortUrl);
+                            setShowDatePicker(true);
+                            setActiveShortCode(url.shortUrl);
                           }}
-                          className="ml-1 text-gray-400 hover:text-blue-600"
+                          className="ml-1 text-gray-400 hover:text-indigo-600"
                           title={
                             url.expiresAt
                               ? "Change expiration"
@@ -800,7 +892,7 @@ const UserDashboard: React.FC = () => {
                           <div className="flex items-center gap-1">
                             <input
                               type="text"
-                              className="w-24 bg-gray-300 text-xs p-2 rounded"
+                              className="w-24 bg-white border border-gray-300 text-xs p-2 rounded focus:outline-none focus:ring-2 focus:ring-indigo-400"
                               value={urlPasswordInputs[url.shortUrl] || ""}
                               onChange={(e) =>
                                 updateUrlPasswordInput(
@@ -838,6 +930,31 @@ const UserDashboard: React.FC = () => {
 
                     {/* password ends */}
 
+                    <td className="p-4 text-center border-b border-gray-200">
+                      <PremiumOnly
+                        requiredPermissions={["CREATE_SHORT_URL"]}
+                        fallbackMessage="QR codes are available with Premium"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => void handleQrCode(url)}
+                          disabled={!canUseQrCode || qrLoadingUrlId === url.id}
+                          className="inline-flex h-9 w-24 items-center justify-center gap-1.5 rounded-md border border-indigo-200 bg-white px-3 text-sm font-medium text-indigo-700 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:text-gray-400"
+                        >
+                          <span className="material-icons md-18">
+                            {qrLoadingUrlId === url.id
+                              ? "progress_activity"
+                              : "qr_code_2"}
+                          </span>
+                          {qrLoadingUrlId === url.id
+                            ? "Loading"
+                            : url.qrCodeAvailable
+                              ? "View"
+                              : "Generate"}
+                        </button>
+                      </PremiumOnly>
+                    </td>
+
                     {/* Actions start */}
 
                     <td className="p-4 border-b border-gray-200 text-right">
@@ -845,7 +962,7 @@ const UserDashboard: React.FC = () => {
                         <PremiumOnly requiredPermissions={["REPLACE"]}>
                         <button
                           onClick={() => handleEditSource(url.shortUrl)}
-                          className="text-blue-500 hover:text-blue-700"
+                          className="text-indigo-500 hover:text-indigo-700"
                         >
                           <Tooltip text="Edit source url">
                             <span className="material-icons">edit</span>
@@ -859,7 +976,7 @@ const UserDashboard: React.FC = () => {
                           onClick={() =>
                             handleToggleActive(url.shortUrl, url.active)
                           }
-                          className="text-blue-500 hover:text-blue-700"
+                          className="text-indigo-500 hover:text-indigo-700"
                         >
                           {url.active ? (
                             <Tooltip text="Deactivate">
@@ -904,7 +1021,7 @@ const UserDashboard: React.FC = () => {
               ) : (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={10}
                     className="p-4 text-center border-b border-gray-200"
                   >
                     No URLs found matching your search.
@@ -916,8 +1033,15 @@ const UserDashboard: React.FC = () => {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-200 p-4">
+      {selectedQr && (
+        <QrCodeModal
+          grid={selectedQr.detail.grid}
+          shortCode={selectedQr.shortCode}
+          onClose={() => setSelectedQr(null)}
+        />
+      )}
+
+      <footer className="bg-white/80 border-t border-gray-200 p-4">
         <div className="max-w-7xl mx-auto text-center text-gray-600">
           © 2025 URL Shortener Service. All rights reserved.
         </div>

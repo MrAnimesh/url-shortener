@@ -12,18 +12,12 @@ public class IpConfig {
 
 	public void setupIpInfo(String ipAddress) {
 
-		System.out.println("IP: "+ipAddress);
-
 		IPinfo ipInfo = new IPinfo.Builder()
 	            .setToken("dedc303cfa3ac1")
 	            .build();
 
 	    try {
-	        IPResponse response = ipInfo.lookupIP("192.168.1.8");
-	        System.out.println("res: "+response.getCountryName());
-
-	        // Print out the hostname
-	        System.out.println("hostname: "+response.getHostname());
+	        ipInfo.lookupIP("192.168.1.8");
 	    } catch (RateLimitedException ex) {
 	        // Handle rate limits here.
 	    }

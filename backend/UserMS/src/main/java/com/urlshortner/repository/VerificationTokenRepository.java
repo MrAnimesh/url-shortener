@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
@@ -15,7 +16,15 @@ public interface VerificationTokenRepository extends JpaRepository<VerificationT
 //	Optional<VerificationToken> findByOtp(Integer otp);
 	
 	@Modifying
-	@Query("UPDATE VerificationToken v SET v.token = :newToken WHERE v.users.email = :email")
-	Integer updateToken(@Param("newToken") String newToken, @Param("email") String email);
+	@Query("""
+			UPDATE VerificationToken v
+			SET v.token = :newToken,
+				v.expiryDate = :expiryDate,
+				v.attempted = false
+			WHERE v.users.email = :email
+			""")
+	Integer updateToken(@Param("newToken") String newToken,
+						@Param("expiryDate") LocalDateTime expiryDate,
+						@Param("email") String email);
 
 }

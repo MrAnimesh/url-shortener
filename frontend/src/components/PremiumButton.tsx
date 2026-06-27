@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useRef, useState } from "react";
 import axiosInstance, { refreshAccessToken } from "../utility/axiosInstance";
 import { UseGlobalContext } from "../context/GlobalContext";
@@ -35,7 +36,10 @@ interface RazorpayFailure {
 
 interface RazorpayInstance {
   open: () => void;
-  on: (event: "payment.failed", handler: (response: RazorpayFailure) => void) => void;
+  on: (
+    event: "payment.failed",
+    handler: (response: RazorpayFailure) => void
+  ) => void;
 }
 
 declare global {
@@ -45,6 +49,8 @@ declare global {
 }
 
 let scriptPromise: Promise<void> | null = null;
+const maxStatusChecks = 60;
+const statusCheckDelay = 2000;
 
 const loadRazorpay = () => {
   if (window.Razorpay) return Promise.resolve();
@@ -67,6 +73,27 @@ const loadRazorpay = () => {
 const wait = (milliseconds: number) =>
   new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 
+const getErrorMessage = (error: unknown, fallbackMessage: string) => {
+  if (axios.isAxiosError(error)) {
+    return error.response?.data?.message || fallbackMessage;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallbackMessage;
+};
+
+const getButtonLabel = (isPremiumUser: boolean, state: ButtonState) => {
+  if (isPremiumUser) return "Premium";
+  if (state === "creating") return "Creating Order...";
+  if (state === "checkout") return "Complete Payment";
+  if (state === "confirming") return "Confirming...";
+
+  return "Get Premium";
+};
+
 const PremiumButton = () => {
   const { isPremiumUser, setIsPremiumUser } = UseGlobalContext();
   const [state, setState] = useState<ButtonState>("idle");
@@ -79,7 +106,7 @@ const PremiumButton = () => {
     setState("confirming");
 
     try {
-      for (let attempt = 0; attempt < 60; attempt += 1) {
+      for (let attempt = 0; attempt < maxStatusChecks; attempt += 1) {
         const response = await axiosInstance.get<StatusResponse>(
           `/api/v1/payments/${transactionId}/status`
         );
@@ -88,22 +115,30 @@ const PremiumButton = () => {
           try {
             await refreshAccessToken();
           } catch {
-            throw new Error("Premium is active, but the session could not be refreshed. Try again.");
+            throw new Error(
+              "Premium is active, but the session could not be refreshed. Try again."
+            );
           }
+
           pendingTransaction.current = null;
           setIsPremiumUser(true);
           return;
         }
+
         if (response.data.status === "FAILED") {
           throw new Error("Payment failed. Please try again.");
         }
-        if (attempt < 59) await wait(2000);
+
+        if (attempt < maxStatusChecks - 1) {
+          await wait(statusCheckDelay);
+        }
       }
-      addError("Payment confirmation is delayed. Click again to check its status.");
+
+      addError(
+        "Payment confirmation is delayed. Click again to check its status."
+      );
     } catch (error) {
-      if (!(error as { isAxiosError?: boolean }).isAxiosError) {
-        addError(error instanceof Error ? error.message : "Could not confirm payment");
-      }
+      addError(getErrorMessage(error, "Could not confirm payment"));
     } finally {
       polling.current = false;
       setState("idle");
@@ -156,27 +191,20 @@ const PremiumButton = () => {
       checkout.on("payment.failed", (failure) => {
         pendingTransaction.current = null;
         setState("idle");
-        addError(failure.error?.description ?? "Payment failed. Please try again.");
+        addError(
+          failure.error?.description ?? "Payment failed. Please try again."
+        );
       });
+
       setState("checkout");
       checkout.open();
     } catch (error) {
       setState("idle");
-      if (!(error as { isAxiosError?: boolean }).isAxiosError) {
-        addError(error instanceof Error ? error.message : "Could not start payment");
-      }
+      addError(getErrorMessage(error, "Could not start payment"));
     }
   };
 
-  const label = isPremiumUser
-    ? "Premium"
-    : state === "creating"
-      ? "Creating Order…"
-      : state === "checkout"
-        ? "Complete Payment"
-        : state === "confirming"
-          ? "Confirming…"
-          : "Get Premium";
+  const label = getButtonLabel(isPremiumUser, state);
 
   return (
     <button

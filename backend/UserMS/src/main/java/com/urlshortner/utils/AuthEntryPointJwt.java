@@ -19,8 +19,6 @@ public class AuthEntryPointJwt implements AuthenticationEntryPoint{
 	@Override
 	public void commence(HttpServletRequest request, HttpServletResponse response,
 			AuthenticationException authException) throws IOException, ServletException {
-		// TODO Auto-generated method stub
-		System.out.println("hi: "+authException);
 		String path = request.getServletPath();
 		
 		if (path.startsWith("/actuator/")) {  // Adjust if context path exists

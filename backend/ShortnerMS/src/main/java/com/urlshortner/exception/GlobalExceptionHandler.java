@@ -5,6 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import com.urlshortner.dto.ErrorResponse;
+
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -13,5 +15,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body("<h2>" + ex.getMessage() + "</h2>");
+    }
+
+    @ExceptionHandler(QrCodeException.class)
+    public ResponseEntity<ErrorResponse> handleQrCodeException(QrCodeException ex) {
+        return ResponseEntity
+                .status(ex.getStatus())
+                .body(new ErrorResponse("FAILED", ex.getMessage()));
     }
 }

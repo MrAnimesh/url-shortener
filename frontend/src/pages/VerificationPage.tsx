@@ -1,24 +1,32 @@
 import axios from "axios";
+import type { MouseEvent } from "react";
 import { useState } from "react";
 import { FaEnvelope, FaClock, FaExclamationCircle } from "react-icons/fa";
 import { ImSpinner8 } from "react-icons/im"; // For loading spinner
 
 import { useLocation } from "react-router-dom";
+import { getApiUrl } from "../utility/config";
+
+interface VerificationState {
+  email: string;
+}
 
 const VerificationPage = () => {
   const location = useLocation();
-  const response = location.state;
+  const response = location.state as VerificationState | null;
   const [isLoading, setIsLoading] = useState(false);
   const [popup, setPopup] = useState(false);
 
-  const requestverificationLink = async (e: any) => {
+  const requestverificationLink = async (e: MouseEvent<HTMLSpanElement>) => {
     e.preventDefault();
+    if (!response?.email) return;
+
     setIsLoading(true);
     console.log("data: ", response);
 
     try {
       const res = await axios.post(
-        "http://localhost:8081/api/v1/auth/public/regeneratelink",
+        getApiUrl("/api/v1/auth/public/regeneratelink"),
         { email: response.email }
       );
       setIsLoading(false);

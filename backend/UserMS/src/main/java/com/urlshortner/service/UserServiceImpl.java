@@ -1,11 +1,13 @@
 package com.urlshortner.service;
 
 import com.urlshortner.dto.UserDTO;
+import com.urlshortner.dto.PublicUserStatsDto;
 import com.urlshortner.entity.Users;
 import com.urlshortner.entity.VerificationToken;
 import com.urlshortner.repository.UserRepository;
 import com.urlshortner.repository.VerificationTokenRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,11 @@ public class UserServiceImpl implements UserService{
 	private EmailService emailService;
 	@Autowired
 	private PasswordEncoder passwordEncoder;
+
+	@Override
+	public PublicUserStatsDto getPublicStats() {
+		return new PublicUserStatsDto(userRepository.count());
+	}
 	
 	
 	@Override
@@ -48,11 +55,29 @@ public class UserServiceImpl implements UserService{
 				return map;
 			}
 		}
+		if(userDTO.getMobileNo() != null && userRepository.existsByMobileNo(userDTO.getMobileNo())) {
+			map.put("email", userDTO.getEmail());
+			map.put("exists", true);
+			map.put("verified", true);
+			map.put("message", "Mobile number is already registered.");
+			return map;
+		}
+
 		Users user = new Users();
 		user.setEmail(userDTO.getEmail());
 		user.setUsername(userDTO.getUsername());
+		user.setMobileNo(userDTO.getMobileNo());
 		user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
-		Long id = userRepository.save(user).getId();
+
+		try {
+			userRepository.save(user);
+		} catch (DataIntegrityViolationException exception) {
+			map.put("email", userDTO.getEmail());
+			map.put("exists", true);
+			map.put("verified", true);
+			map.put("message", "Account details already exist. Please use different details.");
+			return map;
+		}
 		
 		String token = UUID.randomUUID().toString();
 		VerificationToken verificationToken = new VerificationToken();
@@ -72,11 +97,16 @@ public class UserServiceImpl implements UserService{
 	
 	@Override
 	public String regenrateLink(String email) {
+		if(!userRepository.existsByEmail(email)) {
+			return "No account found with this email.";
+		}
+
 		if(userRepository.isVerified(email)) {
 			return "You have already registerd, go to the login page.";
 		}else {
 			String token = UUID.randomUUID().toString();
-			tokenRepository.updateToken(token, email);
+			LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(30);
+			tokenRepository.updateToken(token, expiryDate, email);
 			emailService.sendVerificationEmial(email, token);
 			return "Your new verification link has been generated, kindly check you email";
 		}

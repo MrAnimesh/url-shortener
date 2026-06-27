@@ -2,6 +2,7 @@ package com.urlshortner.controller;
 
 
 import com.urlshortner.dto.LogoutRefreshTokenRequest;
+import com.urlshortner.dto.PublicUserStatsDto;
 import com.urlshortner.dto.RegenerateRequest;
 import com.urlshortner.dto.UserDTO;
 import com.urlshortner.entity.RefreshToken;
@@ -46,6 +47,11 @@ public class AuthController {
     @Autowired
     private UserDetailsService userDetailsService;
 
+    @GetMapping("/public/stats")
+    public ResponseEntity<PublicUserStatsDto> getPublicStats() {
+        return new ResponseEntity<>(userService.getPublicStats(), HttpStatus.OK);
+    }
+
     @PostMapping("/public/register")
     public ResponseEntity<Map<String, Object>> registerUser(@RequestBody @Valid UserDTO userDTO) {
         Map<String, Object> response = userService.registerUser(userDTO);
@@ -60,9 +66,13 @@ public class AuthController {
     }
 
     @GetMapping("/public/verify")
-    public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) throws Exception {
-        String msg = userService.verifyEmail(token);
-        return new ResponseEntity<String>("msg: " + msg, HttpStatus.OK);
+    public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
+        try {
+            String msg = userService.verifyEmail(token);
+            return new ResponseEntity<String>("msg: " + msg, HttpStatus.OK);
+        } catch (Exception exception) {
+            return new ResponseEntity<String>("msg: " + exception.getMessage(), HttpStatus.BAD_REQUEST);
+        }
     }
 
 
@@ -70,7 +80,6 @@ public class AuthController {
     public ResponseEntity<LoginResponse> authenticateUser(@RequestBody LoginRequest loginRequest) {
 
         LoginResponse response = authService.authenticateUser(loginRequest);
-        System.out.println("subscription type in auth controller: " + response.getIsPremiumUser());
         return new ResponseEntity<>(response, HttpStatus.OK);
 
     }
@@ -107,23 +116,13 @@ public class AuthController {
 
     @GetMapping("/auth/private/logout/{email}")
     public ResponseEntity<?> logoutUser(@PathVariable("email") String email) {
-        System.out.println("logout: " + email);
         String message = authService.logoutUser(email);
         SecurityContextHolder.clearContext(); // Clears the authentication
         return ResponseEntity.ok(Map.of("message", message, "status", true));
     }
 
-
-    //	@GetMapping("/auth/public/logout")
-//	public ResponseEntity<?> logout(@RequestParam("refreshToken") String refreshToken){
-//		System.out.println("Inside new logout");
-//		String message = authService.logoutUser2(refreshToken);
-//		SecurityContextHolder.clearContext(); // Clears the authentication
-//	    return ResponseEntity.ok(Map.of("message", message, "status", true));
-//	}
     @PostMapping("/public/logout")
     public ResponseEntity<?> logout(@RequestBody LogoutRefreshTokenRequest refreshToken) {
-        System.out.println("Inside new logout");
         String message = authService.logoutUser2(refreshToken.getRefreshToken());
         SecurityContextHolder.clearContext(); // Clears the authentication
         return ResponseEntity.ok(Map.of("message", message, "status", true));

@@ -1,7 +1,9 @@
 import axios from "axios";
 import { addError } from "../exception_handling/useErrorStore";
+import { API_BASE_URL, getApiUrl } from "./config";
+
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:8081",
+  baseURL: API_BASE_URL,
 });
 
 export const refreshAccessToken = async () => {
@@ -9,7 +11,7 @@ export const refreshAccessToken = async () => {
   if (!refreshToken) throw new Error("Refresh token not found");
 
   const response = await axios.post(
-    "http://localhost:8081/api/v1/auth/public/refreshtoken",
+    getApiUrl("/api/v1/auth/public/refreshtoken"),
     { refreshToken }
   );
   const accessToken = response.data.accessToken;

@@ -2,6 +2,7 @@ package com.urlshortner.service;
 
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.urlshortner.dto.UrlDetail;
@@ -9,8 +10,11 @@ import com.urlshortner.dto.UrlDto;
 import com.urlshortner.dto.UrlFetchDto;
 import com.urlshortner.dto.UrlFetchForCustomDto;
 import com.urlshortner.dto.UrlPasswordDto;
+import com.urlshortner.dto.PublicUrlStatsDto;
+import com.urlshortner.dto.UrlDashboardDto;
 import com.urlshortner.entity.Url;
 import com.urlshortner.exception.UrlException;
+import com.urlshortner.repository.QrDetailRepository;
 import com.urlshortner.repository.UrlRepository;
 
 import java.io.IOException;
@@ -34,6 +38,17 @@ public class UrlServiceImpl {
     private Random pickRandom = new Random();
     @Autowired
     private UrlRepository urlRepository;
+    @Autowired
+    private QrDetailRepository qrDetailRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    public PublicUrlStatsDto getPublicStats() {
+        long linksShortened = urlRepository.count();
+        long clicksTracked = urlRepository.sumClicksTracked();
+
+        return new PublicUrlStatsDto(linksShortened, clicksTracked);
+    }
 
     public Url createShortUrl(UrlFetchDto fetchDto, Long userId) throws UrlException, IOException{
         String shortenUrl = generateShortCode(SHORT_CODE_LENGTH);
@@ -105,14 +120,13 @@ public class UrlServiceImpl {
     
     
     public Integer deleteCreatedUrl(String url, Long userId) {
-    	
-//    	int lastSlashIndex = url.lastIndexOf('/');
-//    	String extractedShortUrl = url.substring(lastSlashIndex + 1);
-//        
-//        return urlRepository.deleteByShortUrl(extractedShortUrl, userId);
-        return urlRepository.deleteByShortUrl(url, userId);
+        Optional<Url> existingUrl = urlRepository.findByShortUrlAndUserId(url, userId);
+        if (existingUrl.isEmpty()) {
+            return 0;
+        }
 
-    
+        qrDetailRepository.deleteByUrlIdAndUserId(existingUrl.get().getId(), userId);
+        return urlRepository.deleteByShortUrl(url, userId);
     }
     
     public boolean isRequestedUrlExists(String shortCode) {
@@ -122,27 +136,19 @@ public class UrlServiceImpl {
     }
     
     public boolean activateUrl(String shortCode, Long userId) {
-    	if(urlRepository.existsByShortUrl(shortCode)) {
-    		urlRepository.activateUrl(shortCode, userId);
-    		return true;
-    	}
-    	return false;
+    	return urlRepository.activateUrl(shortCode, userId) > 0;
     }
+
     public boolean deactivateUrl(String shortCode, Long userId) {
-    	if(urlRepository.existsByShortUrl(shortCode)) {
-    		urlRepository.deactivateUrl(shortCode, userId);
-    		return true;
-    	}
-    	return false;
+    	return urlRepository.deactivateUrl(shortCode, userId) > 0;
     }
     
     public boolean isEnabledOrDisabled(String shortCode) {
     	return urlRepository.isEnabledOrDisabled(shortCode);
     }
     
-    public List<Url> findAllUrls(Long userId){
-    	List<Url> all_url = urlRepository.findByUserId(userId);
-    	return all_url;
+    public List<UrlDashboardDto> findAllUrls(Long userId){
+        return urlRepository.findDashboardUrls(userId);
     }
     
     public int updateOriginalUrl(String shortCode, String newUrl, Long userId) {
@@ -163,8 +169,6 @@ public class UrlServiceImpl {
     }
     
     public boolean isValidUrl(String inputUrl) {
-    	System.out.println("Reaching here");
-    	
     	String normalizedUrl = inputUrl;
         
         if(!inputUrl.startsWith("https://") && !inputUrl.startsWith("http://")) {
@@ -175,25 +179,6 @@ public class UrlServiceImpl {
     	
 //        try {
 //            URI uri = URI.create(normalizedUrl);
-//            URL url = uri.toURL();
-//
-//            InetAddress.getByName(url.getHost());
-//
-//            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-//            connection.setRequestMethod("HEAD");
-//            connection.setConnectTimeout(3000);
-//            connection.connect();
-//
-//            int responseCode = connection.getResponseCode();
-//            System.out.println("response code: "+responseCode);
-//            return (responseCode >= 200 && responseCode < 400);
-//        } catch (UnknownHostException e) {
-//            System.out.println("Unknown host: " + e.getMessage());
-//            return false;
-//        } catch (Exception e) {
-//            System.out.println("URL validation failed: " + e.getMessage());
-//            return false;
-//        }
     }
     
     public boolean updateMaxClicksAllowed(String shortCode, Long userId, Long maxClicks) {
@@ -210,7 +195,8 @@ public class UrlServiceImpl {
     	return false;
     }
     public boolean setUrlPassword(UrlPasswordDto passwordDto, Long userId) {
-    	if(urlRepository.setUrlPassword(passwordDto.getShortCode(), passwordDto.getUrlPassword(), userId) > 0) {
+        String encodedPassword = passwordEncoder.encode(passwordDto.getUrlPassword());
+    	if(urlRepository.setUrlPassword(passwordDto.getShortCode(), encodedPassword, userId) > 0) {
     		return true;
     	}
     	return false;

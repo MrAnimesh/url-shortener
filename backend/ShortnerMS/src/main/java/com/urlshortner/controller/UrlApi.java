@@ -36,6 +36,7 @@ import com.urlshortner.service.UrlServiceImpl;
 //import com.urlshortner.util.IPAddressUtil;
 import com.urlshortner.validation.UrlValidator;
 
+import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.Delegate;
 
@@ -53,6 +54,9 @@ public class UrlApi {
 	@Autowired
 	private FeatureAccessService featureAccessService;
 
+	@Value("${app.short-url-base}")
+	private String shortUrlBase;
+
 //    @Autowired
 //    private IpConfig ipConfig;
 
@@ -62,15 +66,18 @@ public class UrlApi {
 		return "Hi";
 	}
 
+	@GetMapping("/public/stats")
+	public ResponseEntity<PublicUrlStatsDto> getPublicStats() {
+		return new ResponseEntity<>(urlService.getPublicStats(), HttpStatus.OK);
+	}
+
 //    @PostMapping("/public/shorten")
 	@PostMapping("/public/short")
-    public ResponseEntity<String> createShortUrlPublic(@RequestBody UrlFetchDto fetchDto) throws UrlException, IOException{
+    public ResponseEntity<String> createShortUrlPublic(@Valid @RequestBody UrlFetchDto fetchDto) throws UrlException, IOException{
     	if(urlService.isValidUrl(fetchDto.getOriginalUrl())) {
     		Url url = urlService.createShortUrl(fetchDto, null);
-    		System.out.println(fetchDto.getOriginalUrl());
-            return new ResponseEntity<>("http://localhost:8081/"+url.getShortUrl() , HttpStatus.CREATED);
+            return new ResponseEntity<>(buildShortUrl(url.getShortUrl()) , HttpStatus.CREATED);
     	}else {
-    		System.out.println(fetchDto.getOriginalUrl());
             return new ResponseEntity<>("Invalid Url", HttpStatus.BAD_REQUEST);
     	}
 
@@ -79,14 +86,12 @@ public class UrlApi {
 //    @PostMapping("/private/shorten")
 	@PostMapping("/short")
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('CREATE_SHORT_URL')")
-    public ResponseEntity<String> createShortUrlPrivate(@RequestBody UrlFetchDto fetchDto, @RequestHeader("X-User-Id") String userId) throws UrlException, IOException{
+    public ResponseEntity<String> createShortUrlPrivate(@Valid @RequestBody UrlFetchDto fetchDto, @RequestHeader("X-User-Id") String userId) throws UrlException, IOException{
     	if(urlService.isValidUrl(fetchDto.getOriginalUrl())) {
     	Long uId = Long.parseLong(userId);
         Url url = urlService.createShortUrl(fetchDto, uId);
-        System.out.println(fetchDto.getOriginalUrl());
-        return new ResponseEntity<>("http://localhost:8081/"+url.getShortUrl() , HttpStatus.CREATED);
+        return new ResponseEntity<>(buildShortUrl(url.getShortUrl()) , HttpStatus.CREATED);
     	}else {
-    		System.out.println(fetchDto.getOriginalUrl());
             return new ResponseEntity<>("Invalid Url", HttpStatus.BAD_REQUEST);
 
     	}
@@ -95,7 +100,7 @@ public class UrlApi {
 
     @PostMapping("/custom")
     @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or (hasAuthority('CREATE_SHORT_URL') and hasAuthority('CUSTOM_ALIAS')))")
-    public ResponseEntity<ApiResponse> createCustomShortUrl(@RequestBody UrlFetchForCustomDto fetchDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
+    public ResponseEntity<ApiResponse> createCustomShortUrl(@Valid @RequestBody UrlFetchForCustomDto fetchDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "CUSTOM_ALIAS";
 
@@ -111,10 +116,9 @@ public class UrlApi {
 				return new ResponseEntity<>(new SuccessResponse<>(
 						"SUCCESS",
 						"Url Successfully created",
-						"http://localhost:8081/"+fetchDto.getCustomUrl()
+						buildShortUrl(fetchDto.getCustomUrl())
 
 				), HttpStatus.CREATED);
-//	    		return new ResponseEntity<String>("http://localhost:8081/"+fetchDto.getCustomUrl(),HttpStatus.CREATED);
 	    	}
 			return new ResponseEntity<>(
 					new ErrorResponse("FAILED", "This Custom Url already exists, Kindly try different one"),
@@ -162,7 +166,7 @@ public class UrlApi {
 
 			), HttpStatus.CREATED);
     	}else {
-    		return new ResponseEntity<>(new ErrorResponse("FAILED", "This Custom Url already exists, Kindly try different one"),
+    		return new ResponseEntity<>(new ErrorResponse("FAILED", "URL not found."),
 					HttpStatus.NOT_FOUND
 			);
 
@@ -188,7 +192,7 @@ public class UrlApi {
 
 			), HttpStatus.CREATED);
 		}else {
-			return new ResponseEntity<>(new ErrorResponse("FAILED", "This Custom Url already exists, Kindly try different one"),
+			return new ResponseEntity<>(new ErrorResponse("FAILED", "URL not found."),
 					HttpStatus.NOT_FOUND
 			);
 
@@ -199,16 +203,16 @@ public class UrlApi {
 //    @GetMapping("/users/{userId}/urls")
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'WORKER')")
-    public ResponseEntity<List<Url>> getAllUrlOfAUser(@RequestHeader("X-User-Id") String userId){
+	public ResponseEntity<List<UrlDashboardDto>> getAllUrlOfAUser(@RequestHeader("X-User-Id") String userId){
     	Long Id = Long.parseLong(userId);
-    	List<Url> allUrl = urlService.findAllUrls(Id);
+	    	List<UrlDashboardDto> allUrl = urlService.findAllUrls(Id);
     	return new ResponseEntity<>(allUrl, HttpStatus.OK);
     }
 
 
     @PutMapping("/replace")
     @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('REPLACE'))")
-    public ResponseEntity<ApiResponse> replaceOriginalUrl(@RequestBody ReplaceUrlDto replaceUrlDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
+    public ResponseEntity<ApiResponse> replaceOriginalUrl(@Valid @RequestBody ReplaceUrlDto replaceUrlDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "REPLACE";
 
@@ -217,7 +221,13 @@ public class UrlApi {
 		}
 
     	Long uId = Long.parseLong(userId);
-    	urlService.updateOriginalUrl(replaceUrlDto.getShortCode(), replaceUrlDto.getNewUrl(), uId);
+    	int updatedRows = urlService.updateOriginalUrl(replaceUrlDto.getShortCode(), replaceUrlDto.getNewUrl(), uId);
+
+		if (updatedRows == 0) {
+			return new ResponseEntity<>(new ErrorResponse("FAILED", "URL not found."),
+					HttpStatus.NOT_FOUND);
+		}
+
 		return new ResponseEntity<>(new SuccessResponse<>(
 				"SUCCESS",
 				"Source Url Successfully Changed", replaceUrlDto.getNewUrl()
@@ -228,7 +238,7 @@ public class UrlApi {
 
     @PutMapping("/expires")
     @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('SET_EXPIRE_TIME'))")
-    public ResponseEntity<ApiResponse> setUserSpecifiedDeactivationTime(@RequestBody DeactivationTimeDto deactivationTimeDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
+    public ResponseEntity<ApiResponse> setUserSpecifiedDeactivationTime(@Valid @RequestBody DeactivationTimeDto deactivationTimeDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "SET_EXPIRE_TIME";
 
@@ -256,7 +266,7 @@ public class UrlApi {
 
     }
     @PutMapping("/resetExpires/{shortCode}")
-    @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('SET_EXPIRE'))")
+    @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('SET_EXPIRE_TIME'))")
     public ResponseEntity<ApiResponse> resetDeactivationTime(@PathVariable("shortCode") String shortCode, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "SET_EXPIRE_TIME";
@@ -332,7 +342,7 @@ public class UrlApi {
 //	SET_PASSWORD
     @PutMapping("/password")
     @PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('SET_PASSWORD'))")
-    public ResponseEntity<ApiResponse> resetMaxClicks(@RequestBody UrlPasswordDto passwordDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
+    public ResponseEntity<ApiResponse> resetMaxClicks(@Valid @RequestBody UrlPasswordDto passwordDto, @RequestHeader("X-User-Id") String userId, @RequestHeader("X-Subscription") String sub_type){
 
 		String requiredFeature = "SET_PASSWORD";
 
@@ -400,5 +410,9 @@ public class UrlApi {
 //    }
 
 
+
+	private String buildShortUrl(String shortCode) {
+		return shortUrlBase.replaceAll("/+$", "") + "/" + shortCode;
+	}
 
 }

@@ -51,7 +51,6 @@ public class WorkerController {
     public WorkerResponse updateStatus(@AuthenticationPrincipal UserDetailsImpl admin,
                                        @PathVariable Long id,
                                        @RequestBody @Valid WorkerStatusRequest request) {
-        System.out.println("Reaching till here");
         return workerService.updateStatus(admin.getId(), id, request.getEnabled());
     }
 

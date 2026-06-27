@@ -5,6 +5,7 @@ import com.urlshortner.exception.TokenExpiredException;
 import com.urlshortner.repository.RefreshTokenRepository;
 import com.urlshortner.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -14,7 +15,8 @@ import java.util.UUID;
 @Service
 public class RefreshTokenService {
 	
-	private Long refreshTokenDurationMs = 2400000L;
+	@Value("${app.refresh-token-duration-ms:2400000}")
+	private Long refreshTokenDurationMs;
 	
 	@Autowired
 	private RefreshTokenRepository refreshTokenRepository;
@@ -29,7 +31,8 @@ public class RefreshTokenService {
 	public RefreshToken createRefreshToken(Long userId) {
 	    RefreshToken refreshToken = new RefreshToken();
 
-	    refreshToken.setUsers(userRepository.findById(userId).get());
+	    refreshToken.setUsers(userRepository.findById(userId)
+				.orElseThrow(() -> new IllegalArgumentException("User not found.")));
 	    refreshToken.setExpiaryDate(Instant.now().plusMillis(refreshTokenDurationMs));
 	    refreshToken.setToken(UUID.randomUUID().toString());
 
@@ -46,18 +49,10 @@ public class RefreshTokenService {
 	}
 	
 	public void deleteExistingRefreshToken2(String token) {
-	    System.out.println("I'm here: " + token);
-
 	    Optional<RefreshToken> optionalToken = refreshTokenRepository.findByToken(token);
 	    
 	    if (optionalToken.isPresent()) {
-	        RefreshToken newToken = optionalToken.get();
-	        System.out.println("New Token: " + newToken);
-	        
-	        System.out.println("Deleted");
 	        refreshTokenRepository.deleteExistingToken2(token);
-	    } else {
-	        System.out.println("Token not found.");
 	    }
 	}
 

@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.urlshortner.entity.Url;
+import com.urlshortner.dto.UrlDashboardDto;
 
 import jakarta.transaction.Transactional;
 
@@ -18,6 +19,11 @@ import jakarta.transaction.Transactional;
 public interface UrlRepository extends JpaRepository<Url, Long> {
     public boolean existsByShortUrl(String shortUrl);
     public Optional<Url> findByShortUrl(String shortCode);
+    public Optional<Url> findByIdAndUserId(Long id, Long userId);
+    public Optional<Url> findByShortUrlAndUserId(String shortUrl, Long userId);
+
+    @Query("SELECT COALESCE(SUM(u.count), 0) FROM Url u")
+    public Long sumClicksTracked();
     
 //    public Integer deleteByShortUrl(String shortCode);
     
@@ -41,17 +47,36 @@ public interface UrlRepository extends JpaRepository<Url, Long> {
     @Query(value = "UPDATE url_schema.url SET expires_at = NULL WHERE short_url = :shortCode AND user_id = :userId", nativeQuery = true)
     public int resetDeactivationTime( @Param("shortCode") String shortCode, @Param("userId") Long userId);
     
-    public List<Url> findByUserId(Long userId);
+    @Query("""
+            SELECT new com.urlshortner.dto.UrlDashboardDto(
+                u.id,
+                u.originalUrl,
+                u.shortUrl,
+                u.count,
+                u.maxClicksAllowed,
+                u.active,
+                u.userId,
+                u.createdAt,
+                u.expiresAt,
+                u.isPasswordProtected,
+                u.password,
+                CASE WHEN q.id IS NULL THEN false ELSE true END
+            )
+            FROM Url u
+            LEFT JOIN QrDetail q ON q.urlId = u.id AND q.userId = :userId
+            WHERE u.userId = :userId
+            """)
+    public List<UrlDashboardDto> findDashboardUrls(@Param("userId") Long userId);
     
     @Modifying
     @Transactional
     @Query(value = "UPDATE url_schema.url SET active = TRUE WHERE short_url = :shortCode AND user_id = :userId", nativeQuery = true)
-    public void activateUrl(@Param("shortCode") String shortCode, @Param("userId") Long userId);
+    public int activateUrl(@Param("shortCode") String shortCode, @Param("userId") Long userId);
     
     @Modifying
     @Transactional
     @Query(value = "UPDATE url_schema.url SET active = FALSE WHERE short_url = :shortCode AND user_id = :userId", nativeQuery = true)
-    public void deactivateUrl(@Param("shortCode") String shortCode, @Param("userId") Long userId);
+    public int deactivateUrl(@Param("shortCode") String shortCode, @Param("userId") Long userId);
     
     @Modifying
     @Transactional
@@ -59,8 +84,7 @@ public interface UrlRepository extends JpaRepository<Url, Long> {
     				+ "SET active = FALSE\n"
     				+ "WHERE expires_at IS NOT NULL\n"
     				+ "  AND active = TRUE\n"
-    				+ "  AND expires_at <= NOW()\n"
-    				+ "  AND expires_at > NOW() - INTERVAL '1 minute';\n"
+    				+ "  AND expires_at <= NOW();\n"
     				+ "", nativeQuery = true)
     public void deactivateAtUserSpecifiedTime();
     

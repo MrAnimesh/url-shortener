@@ -58,17 +58,12 @@ public class JwtUtils {
 	
 	public boolean validateJwtToken(String authToken) {
 		try {
-			System.out.println("Validate"+ authToken);
 			Jwts.parser().verifyWith((SecretKey) key()).build().parseSignedClaims(authToken);
 			return true;
 		}catch(MalformedJwtException e) {
-			System.out.println("Invalid jwt token: {}"+ e.getMessage());
 		}catch(ExpiredJwtException e) {
-			System.out.println("Jwt token is expired: {}"+ e.getMessage());
 		}catch(UnsupportedJwtException e) {
-			System.out.println("Unsupported token: {}"+ e.getMessage());
 		}catch(IllegalArgumentException e) {
-			System.out.println("Jwt claims string is empty: {}"+ e.getMessage());
 		}
 		return false;
 	}

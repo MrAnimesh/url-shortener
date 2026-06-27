@@ -16,6 +16,7 @@ public class UserDetailsImpl implements UserDetails{
 //	private final Users user;
 	
 	private Long id;
+	private String username;
 	private String email;
 	private String password;
     private Collection<? extends GrantedAuthority> authorities;
@@ -28,6 +29,7 @@ public class UserDetailsImpl implements UserDetails{
 	
 
 	public UserDetailsImpl(Users user) {
+		this.username = user.getUsername();
 		this.email = user.getEmail();
 		this.password = user.getPassword();
 		List<GrantedAuthority> grantedAuthorities = new ArrayList<>();
@@ -52,6 +54,13 @@ public class UserDetailsImpl implements UserDetails{
 
 	public Long getId() {
 		return id;
+	}
+
+	public String getDisplayName() {
+		if (username == null || username.isBlank()) {
+			return email;
+		}
+		return username;
 	}
 
 	public Subscription getSub_type(){

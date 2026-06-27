@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import Header from "../components/Header";
 import axios from "axios";
-import { checkAuth } from "../utility/Utils";
+import { AnimatePresence, motion } from "framer-motion";
+import Header from "../components/Header";
 import { UseGlobalContext } from "../context/GlobalContext";
 import axiosInstance from "../utility/axiosInstance";
+import { checkAuth } from "../utility/Utils";
 import validateField from "../components/Validate";
+import { getApiUrl } from "../utility/config";
 
-type CheckType = string | null;
+const formatStat = (value: number) => {
+  return value.toLocaleString("en-US");
+};
 
 interface FeatureCardProps {
   title: string;
@@ -142,11 +145,93 @@ const faqs: FaqItemProps[] = [
       "Yes, once created, your shortened links will not expire and will continue to redirect to the original URL indefinitely.",
   },
 ];
-type UrlForm = { inputUrl: string; shortUrl: string };
+
+const featureRows = [
+  {
+    feature: "Create short URLs",
+    free: "Included",
+    premium: "Included",
+  },
+  {
+    feature: "Track total clicks",
+    free: "Included",
+    premium: "Included",
+  },
+  {
+    feature: "Custom aliases",
+    free: "Not included",
+    premium: "Included",
+  },
+  {
+    feature: "Activate or deactivate links",
+    free: "Not included",
+    premium: "Included",
+  },
+  {
+    feature: "Set expiry time",
+    free: "Not included",
+    premium: "Included",
+  },
+  {
+    feature: "Set maximum clicks",
+    free: "Not included",
+    premium: "Included",
+  },
+  {
+    feature: "Password protected links",
+    free: "Not included",
+    premium: "Included",
+  },
+  {
+    feature: "Manage workers",
+    free: "Not included",
+    premium: "Included",
+  },
+];
+
+const pricingPlans = [
+  {
+    name: "Free",
+    price: "Rs 0",
+    description: "For simple link shortening.",
+    features: ["Short URLs", "Basic click tracking", "Standard dashboard"],
+  },
+  {
+    name: "Premium",
+    price: "Upgrade",
+    description: "For teams and advanced link control.",
+    features: [
+      "Custom aliases",
+      "Link activation controls",
+      "Expiry and max click limits",
+      "Password protected links",
+      "Worker management",
+    ],
+  },
+];
+
+interface UrlForm {
+  inputUrl: string;
+  shortUrl: string;
+}
+
+interface PublicUrlStats {
+  linksShortened: number;
+  clicksTracked: number;
+}
+
+interface PublicUserStats {
+  usersSignedUp: number;
+}
 
 const Home: React.FC = () => {
   const [animatedIndex, setAnimatedIndex] = useState<number>(0);
   const { isLoggedIn } = UseGlobalContext();
+  const [publicStats, setPublicStats] = useState<PublicUrlStats>({
+    linksShortened: 0,
+    clicksTracked: 0,
+  });
+  const [usersSignedUp, setUsersSignedUp] = useState(0);
   const [urlForm, setUrlForm] = useState<UrlForm>({
     inputUrl: "",
     shortUrl: "",
@@ -155,8 +240,23 @@ const Home: React.FC = () => {
     Partial<Record<keyof UrlForm, string>>
   >({});
 
-  const handleChange = (e: any) => {
+  const loadPublicStats = async () => {
+    try {
+      const urlStatsResponse = await axios.get<PublicUrlStats>(
+        getApiUrl("/api/v1/urls/public/stats")
+      );
+      const userStatsResponse = await axios.get<PublicUserStats>(
+        getApiUrl("/api/v1/auth/public/stats")
+      );
 
+      setPublicStats(urlStatsResponse.data);
+      setUsersSignedUp(userStatsResponse.data.usersSignedUp);
+    } catch (err) {
+      console.log("Unable to load public stats", err);
+    }
+  };
+
+  const handleChange: React.ComponentProps<"input">["onChange"] = (e) => {
     const { name, value } = e.target;
     setUrlForm((prev) => ({ ...prev, [name]: value }));
 
@@ -165,27 +265,26 @@ const Home: React.FC = () => {
   };
 
   useEffect(() => {
-    const token: CheckType = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("accessToken");
     if (token) {
       checkAuth();
     }
+    void loadPublicStats();
+
     const interval = setInterval(() => {
       setAnimatedIndex((prev) => (prev + 1) % urls.length);
     }, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  const handleShortenUrl = async (e: any) => {
+  const handleShortenUrl: React.ComponentProps<"form">["onSubmit"] = async (e) => {
     e.preventDefault();
 
-    const errors: Record<string, string> = {};
-    Object.entries(urlForm).forEach(([name, value]) => {
-      const error = validateField(name, value);
-      if (error) errors[name] = error;
-    });
-    setFormErrors(errors);
-    if (Object.keys(errors).length > 0) {
-      return; // stop submission due to validation errors
+    const inputUrlError = validateField("inputUrl", urlForm.inputUrl);
+    setFormErrors({ inputUrl: inputUrlError });
+
+    if (inputUrlError) {
+      return;
     }
 
     try {
@@ -196,7 +295,7 @@ const Home: React.FC = () => {
         setUrlForm((prev) => ({ ...prev, shortUrl: res.data }));
       } else {
         const res = await axios.post(
-          "http://localhost:8081/api/v1/urls/public/short",
+          getApiUrl("/api/v1/urls/public/short"),
           {
             originalUrl: urlForm.inputUrl,
           }
@@ -204,15 +303,19 @@ const Home: React.FC = () => {
         console.log(res.data);
         setUrlForm((prev) => ({ ...prev, shortUrl: res.data }));
       }
-    } catch (err: any) {
-      console.log("err", err.response.data);
+      void loadPublicStats();
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        console.log("err", err.response?.data);
+        return;
+      }
+      console.log("err", err);
     }
   };
 
   const copyToClipboard = async () => {
-    const url: any = document.getElementById("shortenUrl")?.innerHTML;
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(urlForm.shortUrl);
       console.log("Content copied to clipboard");
     } catch (err) {
       console.error("Failed to copy: ", err);
@@ -221,9 +324,7 @@ const Home: React.FC = () => {
 
   return (
     <>
-      {/* Style tag with animation keyframes */}
       <style>
-        {" "}
         {`
         @keyframes fadeInDown {
           from {
@@ -283,12 +384,10 @@ const Home: React.FC = () => {
       </style>
 
       <div className="bg-white min-h-screen">
-        {/* Header */}
         <Header />
 
         <main className="container mx-auto px-4 py-8">
-          {/* Hero Section */}
-          <section className="flex flex-col items-center justify-center py-20">
+          <section id="home" className="flex flex-col items-center justify-center py-20">
             <div className="text-center opacity-0 translate-y-[-20px] animate-[fadeInDown_0.8s_ease-out_forwards]">
               <h1 className="text-5xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500">
                 Shorten Your Links Instantly
@@ -299,32 +398,38 @@ const Home: React.FC = () => {
               </p>
             </div>
 
-            {/* URL Shortener Form */}
             <div className="mt-12 w-full max-w-2xl opacity-0 translate-y-[20px] animate-[fadeInUp_1s_ease-out_forwards]">
-              <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-2">
+              <form
+                onSubmit={handleShortenUrl}
+                className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-2"
+              >
                 <input
                   type="text"
                   value={urlForm.inputUrl}
-                  id="inputUrl"
                   name="inputUrl"
                   onChange={handleChange}
                   placeholder="Enter your URL here..."
                   className="w-full p-4 rounded-lg bg-gray-100 border-gray-200 border text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-lg"
                 />
                 <button
+                  type="submit"
                   className="bg-gradient-to-r from-indigo-500 to-cyan-400 p-4 rounded-lg font-semibold text-white shadow-lg md:whitespace-nowrap transition-transform duration-200 hover:scale-105 active:scale-95"
-                  onClick={handleShortenUrl}
                 >
                   Shorten URL
                 </button>
-              </div>
-              {formErrors.inputUrl && <p className="mt-2 text-sm text-red-600">{formErrors.inputUrl}</p>}
+              </form>
+
+              {formErrors.inputUrl && (
+                <p className="mt-2 text-sm text-red-600">
+                  {formErrors.inputUrl}
+                </p>
+              )}
+
               {urlForm.shortUrl && (
-                <div
-                  className={`text-sm font-mono text-indigo-600 mt-4 flex justify-center items-center space-x-2`}
-                >
-                  <span id="shortenUrl">{urlForm.shortUrl}</span>
+                <div className="text-sm font-mono text-indigo-600 mt-4 flex justify-center items-center space-x-2">
+                  <span>{urlForm.shortUrl}</span>
                   <button
+                    type="button"
                     onClick={copyToClipboard}
                     className="ml-2 text-sm bg-indigo-500 text-white p-1 rounded transition-transform duration-200 hover:scale-110 active:scale-90"
                     aria-label="Copy to clipboard"
@@ -335,7 +440,6 @@ const Home: React.FC = () => {
               )}
             </div>
 
-            {/* Popular Links Section */}
             <div className="mt-12 text-center bg-gray-50 p-6 rounded-lg shadow-lg max-w-2xl w-full">
               <h3 className="text-lg font-semibold text-gray-700 mb-4">
                 See it in action
@@ -368,6 +472,7 @@ const Home: React.FC = () => {
                     >
                       <span>{url.short}</span>
                       <button
+                        type="button"
                         className="ml-2 text-sm bg-indigo-500 text-white p-1 rounded transition-transform duration-200 hover:scale-110 active:scale-90"
                         aria-label="Copy to clipboard"
                       >
@@ -380,7 +485,6 @@ const Home: React.FC = () => {
             </div>
           </section>
 
-          {/* Analytics Preview */}
           <section className="py-16">
             <h2 className="text-3xl font-bold text-center text-indigo-600 mb-12">
               Real-time Analytics
@@ -388,50 +492,77 @@ const Home: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
               <FeatureCard
                 title="Links Shortened"
-                description="1,234,567"
+                description={formatStat(publicStats.linksShortened)}
                 icon="🔗"
               />
               <FeatureCard
                 title="Clicks Tracked"
-                description="9,876,543"
+                description={formatStat(publicStats.clicksTracked)}
                 icon="👆"
               />
               <FeatureCard
                 title="Active Users"
-                description="10,000+"
+                description={formatStat(usersSignedUp)}
                 icon="👥"
               />
             </div>
           </section>
 
-          {/* Features Section */}
-          <section className="py-16 bg-gray-50 rounded-xl my-16">
+          <section id="features" className="py-16 bg-gray-50 rounded-xl my-16">
             <div className="max-w-5xl mx-auto px-4">
               <h2 className="text-3xl font-bold text-center text-indigo-600 mb-12">
                 Why Choose Our Service
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <FeatureCard
-                  title="Custom URLs"
-                  description="Create memorable, branded short links"
-                />
-                <FeatureCard
-                  title="Detailed Analytics"
-                  description="Track clicks, locations, and devices"
-                />
-                <FeatureCard
-                  title="API Access"
-                  description="Integrate with your applications"
-                />
-                <FeatureCard
-                  title="QR Code Generation"
-                  description="Generate QR codes for your links"
-                />
+              <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-100 text-gray-700">
+                    <tr>
+                      <th className="px-5 py-3 font-semibold">Feature</th>
+                      <th className="px-5 py-3 font-semibold">Free</th>
+                      <th className="px-5 py-3 font-semibold">Premium</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {featureRows.map((row) => (
+                      <tr key={row.feature} className="border-t border-gray-200">
+                        <td className="px-5 py-4 font-medium text-gray-800">
+                          {row.feature}
+                        </td>
+                        <td className="px-5 py-4 text-gray-600">{row.free}</td>
+                        <td className="px-5 py-4 text-gray-600">{row.premium}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </section>
 
-          {/* Call-to-Action (CTA) Section */}
+          {!isLoggedIn && (
+            <section id="pricing" className="py-16">
+              <h2 className="text-3xl font-bold text-center text-indigo-600 mb-12">
+                Pricing
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                {pricingPlans.map((plan) => (
+                  <div
+                    key={plan.name}
+                    className="bg-gray-800 rounded-lg border border-gray-700 p-6 shadow-lg"
+                  >
+                    <h3 className="text-2xl font-bold text-blue-400">{plan.name}</h3>
+                    <p className="mt-3 text-3xl font-bold text-white">{plan.price}</p>
+                    <p className="mt-3 text-gray-300">{plan.description}</p>
+                    <ul className="mt-6 space-y-3 text-gray-300">
+                      {plan.features.map((feature) => (
+                        <li key={feature}>- {feature}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           <section className="py-16 text-center">
             <div className="opacity-0 scale-90 animate-[fadeInScale_0.8s_ease-out_forwards]">
               <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500">
@@ -443,7 +574,10 @@ const Home: React.FC = () => {
                     Join thousands of users who trust us for their link
                     management needs.
                   </p>
-                  <button className="mt-8 bg-gradient-to-r from-indigo-500 to-cyan-400 px-8 py-4 rounded-lg font-semibold text-white text-lg shadow-lg transition-transform duration-200 hover:scale-105 active:scale-95">
+                  <button
+                    type="button"
+                    className="mt-8 bg-gradient-to-r from-indigo-500 to-cyan-400 px-8 py-4 rounded-lg font-semibold text-white text-lg shadow-lg transition-transform duration-200 hover:scale-105 active:scale-95"
+                  >
                     Sign Up Now — It's Free!
                   </button>
                 </div>
@@ -451,7 +585,6 @@ const Home: React.FC = () => {
             </div>
           </section>
 
-          {/* Testimonials Section */}
           <section className="py-16">
             <h2 className="text-3xl font-bold text-center text-indigo-600 mb-12">
               What Our Users Say
@@ -467,7 +600,6 @@ const Home: React.FC = () => {
             </div>
           </section>
 
-          {/* FAQ Section */}
           <section className="py-16">
             <h2 className="text-3xl font-bold text-center text-indigo-600 mb-12">
               Frequently Asked Questions
@@ -484,7 +616,6 @@ const Home: React.FC = () => {
           </section>
         </main>
 
-        {/* Footer */}
         <footer className="bg-gray-100 py-12 border-t border-gray-200">
           <div className="container max-w-5xl mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -597,21 +728,9 @@ const Home: React.FC = () => {
               </p>
               <div className="flex space-x-6 mt-4 md:mt-0">
                 <a
-                  href="#"
-                  className="text-gray-600 hover:text-indigo-600 transition-colors"
-                >
-                  <span className="sr-only">Twitter</span>
-                  <svg
-                    className="h-6 w-6"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
-                  </svg>
-                </a>
-                <a
-                  href="#"
+                  href="https://github.com/MrAnimesh"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-gray-600 hover:text-indigo-600 transition-colors"
                 >
                   <span className="sr-only">GitHub</span>
@@ -629,7 +748,9 @@ const Home: React.FC = () => {
                   </svg>
                 </a>
                 <a
-                  href="#"
+                  href="https://www.linkedin.com/in/mranimesh"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-gray-600 hover:text-indigo-600 transition-colors"
                 >
                   <span className="sr-only">LinkedIn</span>

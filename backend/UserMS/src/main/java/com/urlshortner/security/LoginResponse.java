@@ -11,6 +11,7 @@ public class LoginResponse {
 	private String jwtToken;
 	private String refreshToken;
 	private String email;
+	private String username;
 	private List<String> roles;
 	private Subscription isPremiumUser;
 	
@@ -18,9 +19,10 @@ public class LoginResponse {
 	
 	
 	
-	public LoginResponse(String jwtToken, String refreshToken, String email, List<String> roles, Long id, Subscription isPremiumUser) {
+	public LoginResponse(String jwtToken, String refreshToken, String email, String username, List<String> roles, Long id, Subscription isPremiumUser) {
 		this.jwtToken = jwtToken;
 		this.email = email;
+		this.username = username;
 		this.roles = roles;
 		this.refreshToken = refreshToken;
 		this.id = id;
@@ -38,9 +40,15 @@ public class LoginResponse {
 		this.jwtToken = jwtToken;
 	}
 	public String getUsername() {
+		return username;
+	}
+	public void setUsername(String username) {
+		this.username = username;
+	}
+	public String getEmail() {
 		return email;
 	}
-	public void setUsername(String email) {
+	public void setEmail(String email) {
 		this.email = email;
 	}
 	public List<String> getRoles() {

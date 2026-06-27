@@ -1,5 +1,6 @@
 import axios from "axios";
 import axiosInstance from "./axiosInstance";
+import { getApiUrl } from "./config";
 
 export const checkAuth = async () => {
   axiosInstance.get("/api/v1/auth/verifytoken");
@@ -8,8 +9,8 @@ export const checkAuth = async () => {
 export const logout = async () => {
   const refreshToken = localStorage.getItem("refreshToken");
 
-  const response = await axios.post(
-    `http://localhost:8081/api/v1/auth/public/logout`,
+  await axios.post(
+    getApiUrl("/api/v1/auth/public/logout"),
     { refreshToken }
   );
 

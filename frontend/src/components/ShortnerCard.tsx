@@ -1,7 +1,9 @@
+import type { ChangeEvent, Dispatch, MouseEvent, SetStateAction } from "react";
 import { useState } from "react";
 import axiosInstance from "../utility/axiosInstance";
 import { UseGlobalContext } from "../context/GlobalContext";
 import validateField from "./Validate";
+import { getPublicShortUrl } from "../utility/config";
 
 type UrlForm = {
   originalUrl: string;
@@ -9,8 +11,15 @@ type UrlForm = {
   customDomain: string;
 };
 
-export default function ShortnerCard(props: any) {
+interface ShortnerCardProps {
+  isCardOpen: boolean;
+  setIsCardOpen: Dispatch<SetStateAction<boolean>>;
+  isCustomDomainFocused: boolean;
+  setIsCustomDomainFocused: Dispatch<SetStateAction<boolean>>;
+  setUrls?: unknown;
+}
 
+export default function ShortnerCard(props: ShortnerCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const { isLoggedIn } = UseGlobalContext();
@@ -25,7 +34,7 @@ export default function ShortnerCard(props: any) {
     Partial<Record<keyof UrlForm, string>>
   >({});
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setUrlForm((prev) => ({ ...prev, [name]: value }));
 
@@ -33,16 +42,15 @@ export default function ShortnerCard(props: any) {
     setUrlFormError((prev) => ({ ...prev, [name]: error }));
   };
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: MouseEvent<HTMLButtonElement>) => {
     console.log("Is getting clicked");
-    
+
     e.preventDefault();
 
-    const errors: Record<string, string> = {};
-    Object.entries(["originalUrl"]).forEach(([name, value]) => {
-      const error = validateField(name, value);
-      if (error) errors[name] = error;
-    });
+    const errors: Partial<Record<keyof UrlForm, string>> = {};
+    const error = validateField("originalUrl", urlForm.originalUrl);
+    if (error) errors.originalUrl = error;
+
     setUrlFormError(errors);
     if (Object.keys(errors).length > 0) {
       return; // stop submission due to validation errors
@@ -66,13 +74,13 @@ export default function ShortnerCard(props: any) {
     }
   };
 
-  const handleSubmitForCustom = async (e: any) => {
+  const handleSubmitForCustom = async (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
 
-    const errors: Record<string, string> = {};
+    const errors: Partial<Record<keyof UrlForm, string>> = {};
     Object.entries(urlForm).forEach(([name, value]) => {
       const error = validateField(name, value);
-      if (error) errors[name] = error;
+      if (error) errors[name as keyof UrlForm] = error;
     });
     setUrlFormError(errors);
     if (Object.keys(errors).length > 0) {
@@ -85,13 +93,13 @@ export default function ShortnerCard(props: any) {
         const res = await axiosInstance.post("/api/v1/urls/custom", {
           originalUrl: urlForm.originalUrl,
           customUrl: urlForm.customDomain,
-        }); 
+        });
         console.log(res.data);
-        
+
         setUrlForm((prev) => ({ ...prev, shortenedUrl: res?.data?.data }));
         setIsLoading(false);
-      } catch(err){
-        console.log("CUSTOM_ALIAS: ",err);
+      } catch (err) {
+        console.log("CUSTOM_ALIAS: ", err);
         setIsLoading(false);
       }
     }
@@ -169,7 +177,7 @@ export default function ShortnerCard(props: any) {
                       <div className="relative flex-1">
                         {
                           <span className="text-gray-400 text-sm">
-                            http://localhost:8081/{urlForm.customDomain}
+                            {getPublicShortUrl(urlForm.customDomain)}
                           </span>
                         }
                         <div className="flex items-center">

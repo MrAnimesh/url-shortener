@@ -50,8 +50,15 @@ public class AuthService {
 			
 			List<String> roles = userDetails.getAuthorities().stream().map(item -> item.getAuthority()).collect(Collectors.toList());
 			
-			LoginResponse response = new LoginResponse(jwtToken, refreshToken.getToken(), userDetails.getUsername(), roles, userDetails.getId(), userDetails.getSub_type());
-			System.out.println("subscription type in auth service: " + userDetails.getSub_type());
+			LoginResponse response = new LoginResponse(
+					jwtToken,
+					refreshToken.getToken(),
+					userDetails.getUsername(),
+					userDetails.getDisplayName(),
+					roles,
+					userDetails.getId(),
+					userDetails.getSub_type()
+			);
 			return response;
 		}catch(AuthenticationException e) {
 			Users user = findUser(loginRequest.getEmail());

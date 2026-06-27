@@ -30,7 +30,6 @@ public class Users {
     @Column(unique = true)
     private String mobileNo;
 
-    @Column(unique = true)
     @NotNull
     private String password;
 
