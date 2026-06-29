@@ -10,7 +10,8 @@ public enum PermissionName {
     SET_EXPIRE("Reset URL expiration"),
     SET_EXPIRE_TIME("Set URL expiration time"),
     SET_MAX_CLICK("Set and reset maximum click limits"),
-    REPLACE("Replace a short URL source");
+    REPLACE("Replace a short URL source"),
+    QR_CODE("Generate and view QR codes");
 
     private final String description;
 

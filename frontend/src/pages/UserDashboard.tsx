@@ -85,7 +85,7 @@ const sortUrls = (urls: Url[], sortConfig: SortConfig) => {
 const UserDashboard: React.FC = () => {
   const { isPremiumUser, isAdmin, hasPermission } = UseGlobalContext();
   const canUseQrCode =
-    isPremiumUser && (isAdmin || hasPermission("CREATE_SHORT_URL"));
+    isPremiumUser && (isAdmin || hasPermission("QR_CODE"));
   const [urls, setUrls] = useState<Url[]>([]);
 
   const [isCardOpen, setIsCardOpen] = useState<boolean>(false);
@@ -447,7 +447,7 @@ const UserDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+    <div className="min-h-screen bg-white">
       <HeaderDashboard/>
 
       <main className="max-w-7xl mx-auto px-4 pt-32 pb-12">
@@ -932,8 +932,8 @@ const UserDashboard: React.FC = () => {
 
                     <td className="p-4 text-center border-b border-gray-200">
                       <PremiumOnly
-                        requiredPermissions={["CREATE_SHORT_URL"]}
-                        fallbackMessage="QR codes are available with Premium"
+                        requiredPermissions={["QR_CODE"]}
+                        fallbackMessage="QR code access is not enabled"
                       >
                         <button
                           type="button"

@@ -12,6 +12,7 @@ const permissionOptions = [
   ["SET_EXPIRE_TIME", "Set URL expiration time"],
   ["SET_MAX_CLICK", "Set maximum click limits"],
   ["REPLACE", "Replace a URL source"],
+  ["QR_CODE", "Generate and view QR codes"],
   ["PREMIUM", "Reserved premium entitlement"],
 ] as const;
 

@@ -21,6 +21,7 @@ public interface UrlRepository extends JpaRepository<Url, Long> {
     public Optional<Url> findByShortUrl(String shortCode);
     public Optional<Url> findByIdAndUserId(Long id, Long userId);
     public Optional<Url> findByShortUrlAndUserId(String shortUrl, Long userId);
+    public long countByUserId(Long userId);
 
     @Query("SELECT COALESCE(SUM(u.count), 0) FROM Url u")
     public Long sumClicksTracked();

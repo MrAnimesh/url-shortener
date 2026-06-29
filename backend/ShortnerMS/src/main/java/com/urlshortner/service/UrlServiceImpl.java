@@ -14,6 +14,7 @@ import com.urlshortner.dto.PublicUrlStatsDto;
 import com.urlshortner.dto.UrlDashboardDto;
 import com.urlshortner.entity.Url;
 import com.urlshortner.exception.UrlException;
+import com.urlshortner.exception.UrlLimitExceededException;
 import com.urlshortner.repository.QrDetailRepository;
 import com.urlshortner.repository.UrlRepository;
 
@@ -35,6 +36,7 @@ public class UrlServiceImpl {
 
     private static final String CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int SHORT_CODE_LENGTH = 6;
+    private static final int FREE_URL_LIMIT = 5;
     private Random pickRandom = new Random();
     @Autowired
     private UrlRepository urlRepository;
@@ -51,6 +53,16 @@ public class UrlServiceImpl {
     }
 
     public Url createShortUrl(UrlFetchDto fetchDto, Long userId) throws UrlException, IOException{
+        return createShortUrl(fetchDto, userId, null);
+    }
+
+    public Url createShortUrl(UrlFetchDto fetchDto, Long userId, String subscriptionType)
+            throws UrlException, IOException {
+        boolean isFreeUser = userId != null && "FREE".equalsIgnoreCase(subscriptionType);
+        if (isFreeUser && urlRepository.countByUserId(userId) >= FREE_URL_LIMIT) {
+            throw new UrlLimitExceededException("Free accounts can create up to 5 short URLs.");
+        }
+
         String shortenUrl = generateShortCode(SHORT_CODE_LENGTH);
         while(urlRepository.existsByShortUrl(shortenUrl)){
             shortenUrl = generateShortCode(SHORT_CODE_LENGTH);
@@ -69,6 +81,9 @@ public class UrlServiceImpl {
         url.setCount((long) 0);
         url.setUserId(userId);
         url.setCreatedAt(LocalDateTime.now());
+        if (isFreeUser) {
+            url.setExpiresAt(null);
+        }
 
         return urlRepository.save(url);
     }

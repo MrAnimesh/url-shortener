@@ -84,12 +84,15 @@ public class UrlApi {
 
     }
 //    @PostMapping("/private/shorten")
-	@PostMapping("/short")
+    @PostMapping("/short")
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('CREATE_SHORT_URL')")
-    public ResponseEntity<String> createShortUrlPrivate(@Valid @RequestBody UrlFetchDto fetchDto, @RequestHeader("X-User-Id") String userId) throws UrlException, IOException{
+    public ResponseEntity<String> createShortUrlPrivate(
+            @Valid @RequestBody UrlFetchDto fetchDto,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-Subscription") String subscriptionType) throws UrlException, IOException {
     	if(urlService.isValidUrl(fetchDto.getOriginalUrl())) {
     	Long uId = Long.parseLong(userId);
-        Url url = urlService.createShortUrl(fetchDto, uId);
+        Url url = urlService.createShortUrl(fetchDto, uId, subscriptionType);
         return new ResponseEntity<>(buildShortUrl(url.getShortUrl()) , HttpStatus.CREATED);
     	}else {
             return new ResponseEntity<>("Invalid Url", HttpStatus.BAD_REQUEST);

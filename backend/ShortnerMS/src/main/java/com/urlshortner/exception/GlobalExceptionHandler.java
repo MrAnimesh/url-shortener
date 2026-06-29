@@ -23,4 +23,11 @@ public class GlobalExceptionHandler {
                 .status(ex.getStatus())
                 .body(new ErrorResponse("FAILED", ex.getMessage()));
     }
+
+    @ExceptionHandler(UrlLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleUrlLimitExceededException(UrlLimitExceededException ex) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse("FAILED", ex.getMessage()));
+    }
 }

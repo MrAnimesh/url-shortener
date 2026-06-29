@@ -21,7 +21,7 @@ import jakarta.validation.constraints.Positive;
 @Validated
 @RestController
 @RequestMapping("/api/v1/qr")
-@PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('CREATE_SHORT_URL'))")
+@PreAuthorize("hasAuthority('SUBSCRIPTION_PREMIUM') and (hasRole('ADMIN') or hasAuthority('QR_CODE'))")
 public class QrController {
     private final QrService qrService;
 

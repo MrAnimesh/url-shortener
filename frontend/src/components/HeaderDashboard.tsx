@@ -30,7 +30,7 @@ const HeaderDashboard: React.FC = () => {
       className={`w-full p-4 fixed top-0 left-0 z-50 transition-all duration-300 ${
         scrolled
           ? "bg-white shadow-lg border-b border-gray-200"
-          : "bg-white/80 backdrop-blur-sm border-b border-transparent"
+          : "bg-white/90 backdrop-blur-sm border-b border-transparent"
       }`}
     >
       <div className="max-w-7xl mx-auto flex justify-between items-center">
