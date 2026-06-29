@@ -24,8 +24,8 @@ The screenshot is attached below.
 - 💻 Frontend in React + TypeScript + TailwindCSS
 - 🛢️ PostgreSQL for data persistence
 - 📊 Visit tracking / Analytics (coming soon)
-- 🔜 Admin Dashboard 
-- 🔜 Premium feature restriction
+- 🧑‍💼 Admin Dashboard 
+- 🔥 Premium feature restriction
 - 🔜 docker based setup (Coming soon)
 - 🔜 google login (Coming soon)
 
@@ -41,6 +41,10 @@ The screenshot is attached below.
 - React
 - TypeScript
 - TailwindCSS
+
+**Other**
+- QR code -> ZXing library
+- Payment Gateway -> Razorpay
 
 
 
